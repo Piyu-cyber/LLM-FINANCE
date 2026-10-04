@@ -6,9 +6,9 @@ readme = "README.md"
 authors = [
     { name = "piyu-cyber", email = "piyushprashantmanutd@gmail.com" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
+
 dependencies = [
-    "faiss-cpu>=1.15.1",
     "jsonschema>=4.26.0",
     "numpy>=2.4.6",
     "pandas>=3.0.6",
@@ -19,6 +19,10 @@ dependencies = [
     "sentence-transformers>=6.1.0",
     "statsmodels>=0.15.0",
     "tqdm>=4.70.1",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "transformers>=5.18.0",
 ]
 
 [project.scripts]
@@ -27,3 +31,13 @@ llm-finance = "llm_finance:main"
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+torchvision = { index = "pytorch-cu126" }
+torchaudio = { index = "pytorch-cu126" }
