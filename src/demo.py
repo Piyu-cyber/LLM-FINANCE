@@ -197,6 +197,7 @@ def main():
             RRF_K,
             MODEL_NAME,
         )
+        import torch
         import numpy as np
         from sentence_transformers import SentenceTransformer
 
@@ -205,7 +206,10 @@ def main():
         bm25 = build_bm25(chunks)
         bm25_res = bm25_search(QUESTION, bm25, BM25_TOP_K)
         embeddings = np.load(embeddings_path)
-        model = SentenceTransformer(MODEL_NAME, device="cuda")
+        model = SentenceTransformer(
+            MODEL_NAME,
+            device=("cuda" if torch.cuda.is_available() else "cpu"),
+        )
         dense_res = dense_search(QUESTION, model, embeddings, DENSE_TOP_K)
         fused = reciprocal_rank_fusion(bm25_res, dense_res, RRF_K)
         retrieved_chunks = [chunks[idx] for idx, _ in fused if chunks[idx]["example_id"] == EXAMPLE_ID]

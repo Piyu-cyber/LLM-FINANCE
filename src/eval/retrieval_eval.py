@@ -17,6 +17,10 @@ TOP_K = 100
 QUERY_BATCH_SIZE = 64
 RRF_K = 60
 
+# Top-N candidates passed to cross-encoder reranker
+RERANK_POOL_SIZE = 50
+RERANK_TOP_K = 5
+
 
 # ============================================================
 # Loading
@@ -71,6 +75,16 @@ def get_gold_evidence(example):
     return evidence
 
 
+def get_example_id(example):
+    """Return the document-level ID for a FinQA example.
+
+    FinQA stores the filing identifier in example["id"], e.g.
+    "UNP/2009/page_34.pdf-1".  This is the *page-level* key that
+    every chunk for that example carries in chunk["example_id"].
+    """
+    return str(example.get("id", ""))
+
+
 def evidence_matches(retrieved_text, gold_evidence):
 
     retrieved_text = retrieved_text.strip().lower()
@@ -94,43 +108,92 @@ def evidence_matches(retrieved_text, gold_evidence):
     return False
 
 
+def page_hit(chunk, gold_example_id):
+    """Return True when the chunk belongs to the same document as the gold example.
+
+    A chunk is a page-level hit when its ``example_id`` exactly matches
+    the gold document identifier, regardless of which specific row or
+    sentence was retrieved.
+    """
+    if not gold_example_id:
+        return False
+
+    return chunk.get("example_id", "") == gold_example_id
+
+
 # ============================================================
 # Metrics
 # ============================================================
 
-def update_metrics(found_rank, metrics):
+def update_metrics(found_span_rank, found_page_rank, metrics):
+    """Update both span-level and page-level recall / MRR counters.
 
+    Parameters
+    ----------
+    found_span_rank : int or None
+        1-based rank of the first retrieved chunk whose text matches
+        the gold evidence text.  ``None`` if not found in top-K.
+    found_page_rank : int or None
+        1-based rank of the first retrieved chunk that belongs to the
+        correct document (page-level hit).  ``None`` if not found.
+    metrics : dict
+        The running metrics dictionary (mutated in place).
+    """
     metrics["evaluated"] += 1
 
-    if found_rank is None:
-        return
+    # ------------------------------------------------------------------
+    # Span-level (text match)
+    # ------------------------------------------------------------------
+    if found_span_rank is not None:
 
-    if found_rank <= 1:
-        metrics["recall_at_1"] += 1
+        if found_span_rank <= 1:
+            metrics["span_recall_at_1"] += 1
 
-    if found_rank <= 5:
-        metrics["recall_at_5"] += 1
+        if found_span_rank <= 5:
+            metrics["span_recall_at_5"] += 1
 
-    if found_rank <= 10:
-        metrics["recall_at_10"] += 1
+        if found_span_rank <= 10:
+            metrics["span_recall_at_10"] += 1
 
-    metrics["mrr"] += 1.0 / found_rank
+        metrics["span_mrr"] += 1.0 / found_span_rank
+
+    # ------------------------------------------------------------------
+    # Page-level (document match)
+    # ------------------------------------------------------------------
+    if found_page_rank is not None:
+
+        if found_page_rank <= 1:
+            metrics["page_recall_at_1"] += 1
+
+        if found_page_rank <= 5:
+            metrics["page_recall_at_5"] += 1
+
+        if found_page_rank <= 10:
+            metrics["page_recall_at_10"] += 1
+
+        metrics["page_mrr"] += 1.0 / found_page_rank
 
 
 def create_metrics():
-
+    """Create a fresh dual-level metrics dictionary."""
     return {
         "evaluated": 0,
         "no_gold": 0,
-        "recall_at_1": 0,
-        "recall_at_5": 0,
-        "recall_at_10": 0,
-        "mrr": 0.0,
+        # Span-level: exact text match with gold evidence
+        "span_recall_at_1": 0,
+        "span_recall_at_5": 0,
+        "span_recall_at_10": 0,
+        "span_mrr": 0.0,
+        # Page-level: retrieved chunk belongs to correct document
+        "page_recall_at_1": 0,
+        "page_recall_at_5": 0,
+        "page_recall_at_10": 0,
+        "page_mrr": 0.0,
     }
 
 
 def print_metrics(method, metrics):
-
+    """Print a formatted dual-level recall table."""
     evaluated = metrics["evaluated"]
 
     print()
@@ -146,28 +209,56 @@ def print_metrics(method, metrics):
         return
 
     print()
+    print(f"{'Metric':<20} {'Span-level':>12} {'Page-level':>12}")
+    print("-" * 46)
 
     print(
-        f"Recall@1           : "
-        f"{metrics['recall_at_1'] / evaluated:.4f}"
+        f"{'Recall@1':<20}"
+        f" {metrics['span_recall_at_1'] / evaluated:>12.4f}"
+        f" {metrics['page_recall_at_1'] / evaluated:>12.4f}"
     )
 
     print(
-        f"Recall@5           : "
-        f"{metrics['recall_at_5'] / evaluated:.4f}"
+        f"{'Recall@5':<20}"
+        f" {metrics['span_recall_at_5'] / evaluated:>12.4f}"
+        f" {metrics['page_recall_at_5'] / evaluated:>12.4f}"
     )
 
     print(
-        f"Recall@10          : "
-        f"{metrics['recall_at_10'] / evaluated:.4f}"
+        f"{'Recall@10':<20}"
+        f" {metrics['span_recall_at_10'] / evaluated:>12.4f}"
+        f" {metrics['page_recall_at_10'] / evaluated:>12.4f}"
     )
 
     print(
-        f"MRR                : "
-        f"{metrics['mrr'] / evaluated:.4f}"
+        f"{'MRR':<20}"
+        f" {metrics['span_mrr'] / evaluated:>12.4f}"
+        f" {metrics['page_mrr'] / evaluated:>12.4f}"
     )
 
     print("=" * 60)
+
+
+def metrics_to_dict(method, metrics):
+    """Serialise metrics to a plain dict for JSON export."""
+    evaluated = metrics["evaluated"]
+
+    if evaluated == 0:
+        return {"method": method, "evaluated": 0}
+
+    return {
+        "method": method,
+        "evaluated": evaluated,
+        "no_gold": metrics["no_gold"],
+        "span_recall_at_1": round(metrics["span_recall_at_1"] / evaluated, 4),
+        "span_recall_at_5": round(metrics["span_recall_at_5"] / evaluated, 4),
+        "span_recall_at_10": round(metrics["span_recall_at_10"] / evaluated, 4),
+        "span_mrr": round(metrics["span_mrr"] / evaluated, 4),
+        "page_recall_at_1": round(metrics["page_recall_at_1"] / evaluated, 4),
+        "page_recall_at_5": round(metrics["page_recall_at_5"] / evaluated, 4),
+        "page_recall_at_10": round(metrics["page_recall_at_10"] / evaluated, 4),
+        "page_mrr": round(metrics["page_mrr"] / evaluated, 4),
+    }
 
 
 # ============================================================
@@ -213,6 +304,7 @@ def evaluate_bm25(chunks, examples):
             continue
 
         gold_evidence = get_gold_evidence(example)
+        gold_example_id = get_example_id(example)
 
         if not gold_evidence:
             metrics["no_gold"] += 1
@@ -226,23 +318,35 @@ def evaluate_bm25(chunks, examples):
             scores
         )[::-1][:TOP_K]
 
-        found_rank = None
+        found_span_rank = None
+        found_page_rank = None
 
         for rank, index in enumerate(
             top_indices,
             start=1
         ):
 
-            if evidence_matches(
-                chunks[index].get("text", ""),
+            chunk = chunks[index]
+
+            if found_span_rank is None and evidence_matches(
+                chunk.get("text", ""),
                 gold_evidence
             ):
+                found_span_rank = rank
 
-                found_rank = rank
+            if found_page_rank is None and page_hit(
+                chunk,
+                gold_example_id
+            ):
+                found_page_rank = rank
+
+            # Stop scanning once both ranks are found
+            if found_span_rank is not None and found_page_rank is not None:
                 break
 
         update_metrics(
-            found_rank,
+            found_span_rank,
+            found_page_rank,
             metrics
         )
 
@@ -257,6 +361,8 @@ def evaluate_bm25(chunks, examples):
         "BM25",
         metrics
     )
+
+    return metrics
 
 
 # ============================================================
@@ -360,23 +466,36 @@ def evaluate_dense(
             scores
         )[::-1][:TOP_K]
 
-        found_rank = None
+        gold_example_id = get_example_id(example)
+
+        found_span_rank = None
+        found_page_rank = None
 
         for rank, index in enumerate(
             top_indices,
             start=1
         ):
 
-            if evidence_matches(
-                chunks[index].get("text", ""),
+            chunk = chunks[index]
+
+            if found_span_rank is None and evidence_matches(
+                chunk.get("text", ""),
                 gold_evidence
             ):
+                found_span_rank = rank
 
-                found_rank = rank
+            if found_page_rank is None and page_hit(
+                chunk,
+                gold_example_id
+            ):
+                found_page_rank = rank
+
+            if found_span_rank is not None and found_page_rank is not None:
                 break
 
         update_metrics(
-            found_rank,
+            found_span_rank,
+            found_page_rank,
             metrics
         )
 
@@ -391,6 +510,8 @@ def evaluate_dense(
         "DENSE",
         metrics
     )
+
+    return metrics
 
 
 # ============================================================
@@ -504,23 +625,36 @@ def evaluate_rrf(
         # Check gold evidence
         # ----------------------------
 
-        found_rank = None
+        gold_example_id = get_example_id(example)
+
+        found_span_rank = None
+        found_page_rank = None
 
         for rank, index in enumerate(
             top_indices,
             start=1
         ):
 
-            if evidence_matches(
-                chunks[index].get("text", ""),
+            chunk = chunks[index]
+
+            if found_span_rank is None and evidence_matches(
+                chunk.get("text", ""),
                 gold_evidence
             ):
+                found_span_rank = rank
 
-                found_rank = rank
+            if found_page_rank is None and page_hit(
+                chunk,
+                gold_example_id
+            ):
+                found_page_rank = rank
+
+            if found_span_rank is not None and found_page_rank is not None:
                 break
 
         update_metrics(
-            found_rank,
+            found_span_rank,
+            found_page_rank,
             metrics
         )
 
@@ -535,6 +669,158 @@ def evaluate_rrf(
         "RRF",
         metrics
     )
+
+    return metrics
+
+
+# ============================================================
+# RRF + Cross-Encoder Reranker (Phase 1 Step 1.4)
+# ============================================================
+
+def evaluate_rrf_reranked(
+    chunks,
+    valid_examples,
+    bm25,
+    embeddings,
+    query_embeddings
+):
+    """Evaluate RRF followed by cross-encoder reranking.
+
+    Takes the top-RERANK_POOL_SIZE RRF candidates, reranks them with
+    BAAI/bge-reranker-base, and evaluates Recall/MRR over the reranked
+    top-RERANK_TOP_K results.
+    """
+    # Import here to avoid a hard dependency when not used
+    try:
+        from cross_encoder_reranker import CrossEncoderReranker
+    except ImportError:
+        print(
+            "\n[ERROR] cross_encoder_reranker not found. "
+            "Run from src/retrieval on PYTHONPATH."
+        )
+        return create_metrics()
+
+    reranker = CrossEncoderReranker()
+
+    metrics = create_metrics()
+
+    print(
+        "\nEvaluating RRF + Cross-Encoder Reranker..."
+    )
+    print(
+        f"  Pool size : {RERANK_POOL_SIZE}  ->  keep top {RERANK_TOP_K}"
+    )
+
+    for example_number, (
+        example,
+        question,
+        gold_evidence
+    ) in enumerate(
+        valid_examples,
+        start=1
+    ):
+
+        # ----------------------------
+        # BM25
+        # ----------------------------
+
+        bm25_scores = bm25.get_scores(
+            tokenize(question)
+        )
+
+        bm25_indices = np.argsort(
+            bm25_scores
+        )[::-1][:TOP_K]
+
+        # ----------------------------
+        # Dense
+        # ----------------------------
+
+        query_embedding = query_embeddings[
+            example_number - 1
+        ]
+
+        dense_scores = embeddings @ query_embedding
+
+        dense_indices = np.argsort(
+            dense_scores
+        )[::-1][:TOP_K]
+
+        # ----------------------------
+        # RRF
+        # ----------------------------
+
+        fused = reciprocal_rank_fusion(
+            bm25_indices,
+            dense_indices,
+            RRF_K
+        )
+
+        pool_indices = [
+            index
+            for index, score in fused[:RERANK_POOL_SIZE]
+        ]
+
+        # ----------------------------
+        # Cross-encoder reranking
+        # ----------------------------
+
+        pool_chunks = [chunks[i] for i in pool_indices]
+
+        reranked = reranker.rerank(
+            question,
+            pool_chunks,
+            top_k=RERANK_TOP_K
+        )
+
+        # ----------------------------
+        # Check gold evidence
+        # ----------------------------
+
+        gold_example_id = get_example_id(example)
+
+        found_span_rank = None
+        found_page_rank = None
+
+        for rank, chunk in enumerate(
+            reranked,
+            start=1
+        ):
+
+            if found_span_rank is None and evidence_matches(
+                chunk.get("text", ""),
+                gold_evidence
+            ):
+                found_span_rank = rank
+
+            if found_page_rank is None and page_hit(
+                chunk,
+                gold_example_id
+            ):
+                found_page_rank = rank
+
+            if found_span_rank is not None and found_page_rank is not None:
+                break
+
+        update_metrics(
+            found_span_rank,
+            found_page_rank,
+            metrics
+        )
+
+        if example_number % 500 == 0:
+
+            print(
+                f"Processed "
+                f"{example_number}/{len(valid_examples)} examples..."
+            )
+
+    print_metrics(
+        "RRF + Cross-Encoder",
+        metrics
+    )
+
+    return metrics
 
 
 # ============================================================
@@ -606,40 +892,95 @@ def main():
     print("1. BM25")
     print("2. Dense")
     print("3. RRF")
+    print("4. RRF + Cross-Encoder Reranker")
+    print("5. All (ablation table)")
 
     choice = input(
         "\nEnter choice: "
     ).strip()
 
+    all_results = []
+
     if choice == "1":
 
-        evaluate_bm25(
-            chunks,
-            examples
-        )
+        m = evaluate_bm25(chunks, examples)
+        all_results.append(metrics_to_dict("BM25", m))
 
     elif choice == "2":
 
-        evaluate_dense(
+        m = evaluate_dense(
             chunks,
             valid_examples,
             embeddings,
             query_embeddings
         )
+        all_results.append(metrics_to_dict("Dense", m))
 
     elif choice == "3":
 
-        evaluate_rrf(
+        m = evaluate_rrf(
             chunks,
             valid_examples,
             bm25,
             embeddings,
             query_embeddings
         )
+        all_results.append(metrics_to_dict("RRF", m))
+
+    elif choice == "4":
+
+        m = evaluate_rrf_reranked(
+            chunks,
+            valid_examples,
+            bm25,
+            embeddings,
+            query_embeddings
+        )
+        all_results.append(metrics_to_dict("RRF+CE", m))
+
+    elif choice == "5":
+
+        print("\n[Ablation] Running all methods...\n")
+
+        m1 = evaluate_bm25(chunks, examples)
+        all_results.append(metrics_to_dict("BM25", m1))
+
+        m2 = evaluate_dense(
+            chunks, valid_examples, embeddings, query_embeddings
+        )
+        all_results.append(metrics_to_dict("Dense", m2))
+
+        m3 = evaluate_rrf(
+            chunks, valid_examples, bm25, embeddings, query_embeddings
+        )
+        all_results.append(metrics_to_dict("RRF", m3))
+
+        m4 = evaluate_rrf_reranked(
+            chunks, valid_examples, bm25, embeddings, query_embeddings
+        )
+        all_results.append(metrics_to_dict("RRF+CE", m4))
 
     else:
 
         print("Invalid choice.")
+
+    # ------------------------------------------------------------------
+    # Save results to JSON for the ablation table
+    # ------------------------------------------------------------------
+
+    if all_results:
+
+        results_dir = Path("results")
+        results_dir.mkdir(exist_ok=True)
+
+        output_path = results_dir / "retrieval_ablation.json"
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(all_results, f, indent=2)
+
+        print(
+            f"\n[Results saved to {output_path}]"
+        )
 
 
 if __name__ == "__main__":
