@@ -6,6 +6,12 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 from claim_schema import CLAIM_SCHEMA
+from calculator import (
+    to_decimal,
+    is_expense_like,
+    infer_direction,
+    CalculationError,
+)
 
 
 CORPUS_PATH = Path(
@@ -13,7 +19,52 @@ CORPUS_PATH = Path(
 )
 
 
-def load_corpus():
+# ---------------------------------------------------------------------------
+# Directional financial keywords
+# ---------------------------------------------------------------------------
+
+INCREASE_KEYWORDS = {
+    "increase",
+    "increased",
+    "increases",
+    "increasing",
+    "higher",
+    "rose",
+    "rising",
+    "grew",
+    "growth",
+    "jumped",
+    "up from",
+    "surpassed",
+    "gain",
+    "expanded",
+    "improvement",
+    "improved",
+    "expansion",
+}
+
+DECREASE_KEYWORDS = {
+    "decrease",
+    "decreased",
+    "decreases",
+    "decreasing",
+    "lower",
+    "fell",
+    "falling",
+    "declined",
+    "decline",
+    "dropped",
+    "drop",
+    "down from",
+    "reduction",
+    "reduced",
+    "loss",
+    "contracted",
+    "contraction",
+}
+
+
+def load_corpus(path=CORPUS_PATH):
     """
     Load the FinQA retrieval corpus.
 
@@ -22,8 +73,12 @@ def load_corpus():
     """
 
     chunks = []
+    p = Path(path)
 
-    with CORPUS_PATH.open(
+    if not p.exists():
+        return chunks
+
+    with p.open(
         "r",
         encoding="utf-8"
     ) as f:
@@ -288,28 +343,28 @@ def unit_matches_evidence(
     unit_aliases = {
 
         "million usd": [
-        "million",
-        "millions",
-        "million dollars",
-        "millions of dollars",
-        "usd",
-        "$"
-    ],
+            "million",
+            "millions",
+            "million dollars",
+            "millions of dollars",
+            "usd",
+            "$"
+        ],
 
-    "billion usd": [
-        "billion",
-        "billions",
-        "billion dollars",
-        "billions of dollars",
-        "usd",
-        "$"
-    ],
+        "billion usd": [
+            "billion",
+            "billions",
+            "billion dollars",
+            "billions of dollars",
+            "usd",
+            "$"
+        ],
 
-    "percent": [
-        "%",
-        "percent",
-        "percentage"
-    ],
+        "percent": [
+            "%",
+            "percent",
+            "percentage"
+        ],
     }
 
     aliases = unit_aliases.get(
@@ -321,6 +376,136 @@ def unit_matches_evidence(
         alias in text
         for alias in aliases
     )
+
+
+def extract_narrative_direction(text, metric=None):
+    """
+    Extract financial direction from narrative evidence.
+
+    If metric is provided (e.g. "interest expense"), prioritize sentences
+    that explicitly discuss that metric.
+    """
+    if not text:
+        return {"direction": "unknown", "keyword": None, "sentence": None}
+
+    # Split into candidate sentences/clauses
+    sentences = [s.strip() for s in re.split(r"[.!?\n|]", text) if s.strip()]
+
+    metric_terms = []
+    if metric:
+        metric_terms = [m.lower().strip() for m in metric.split() if len(m) > 2]
+
+    relevant_sentences = []
+    other_sentences = []
+
+    for s in sentences:
+        s_lower = s.lower()
+        if metric_terms and any(t in s_lower for t in metric_terms):
+            relevant_sentences.append(s)
+        else:
+            other_sentences.append(s)
+
+    ordered_sentences = relevant_sentences + other_sentences
+
+    for s in ordered_sentences:
+        tokens = set(re.findall(r"\b\w+\b", s.lower()))
+        inc_hits = tokens.intersection(INCREASE_KEYWORDS)
+        dec_hits = tokens.intersection(DECREASE_KEYWORDS)
+
+        if inc_hits and not dec_hits:
+            return {
+                "direction": "increase",
+                "keyword": sorted(list(inc_hits))[0],
+                "sentence": s,
+            }
+        elif dec_hits and not inc_hits:
+            return {
+                "direction": "decrease",
+                "keyword": sorted(list(dec_hits))[0],
+                "sentence": s,
+            }
+
+    return {"direction": "unknown", "keyword": None, "sentence": None}
+
+
+def validate_narrative_direction(
+    claimed_value,
+    evidence_texts,
+    referent=None,
+    claimed_direction=None,
+    item_type=None,
+):
+    """
+    Check consistency between calculated/claimed direction and narrative text.
+
+    Catches the classic 'grounded-but-wrong' accounting inversion:
+    e.g. naive -600 - (-511) = -89 (decrease) vs narrative 'interest expense increased'.
+    """
+    metric = referent.get("entity", "") if referent else ""
+    if not item_type and referent:
+        item_type = referent.get("entity", "")
+
+    combined_text = " . ".join(evidence_texts)
+    narrative_info = extract_narrative_direction(combined_text, metric=metric)
+    narr_dir = narrative_info["direction"]
+
+    if narr_dir == "unknown":
+        return {
+            "valid": True,
+            "status": "DIRECTION_UNCONSTRAINED",
+            "narrative_direction": "unknown",
+            "calculated_direction": infer_direction(claimed_value),
+            "reason": "No directional keywords found in narrative evidence.",
+            "supporting_sentence": None,
+            "keyword": None,
+        }
+
+    calc_dir = infer_direction(claimed_value)
+    effective_claimed_dir = claimed_direction.lower() if claimed_direction else calc_dir
+
+    if effective_claimed_dir == narr_dir:
+        return {
+            "valid": True,
+            "status": "VERIFIED_DIRECTION",
+            "narrative_direction": narr_dir,
+            "calculated_direction": calc_dir,
+            "reason": f"Narrative direction ('{narr_dir}') matches claimed/calculated change ({claimed_value}).",
+            "supporting_sentence": narrative_info["sentence"],
+            "keyword": narrative_info["keyword"],
+        }
+
+    # Detect accounting sign inversion on expenses/costs
+    is_expense = is_expense_like(item_type) or (referent and is_expense_like(referent.get("entity", "")))
+
+    if is_expense and calc_dir == "decrease" and narr_dir == "increase":
+        return {
+            "valid": False,
+            "status": "DIRECTIONAL_CONTRADICTION",
+            "narrative_direction": narr_dir,
+            "calculated_direction": calc_dir,
+            "reason": (
+                f"Directional contradiction: Narrative evidence explicitly states that '{metric}' {narr_dir}d "
+                f"('{narrative_info['sentence']}'), but the naive signed calculation yields a negative change "
+                f"({claimed_value}), indicating a decrease. In accounting statements, expenses are recorded as negative outflows; "
+                f"the economic change in expense magnitude is positive (e.g. +89 million USD)."
+            ),
+            "supporting_sentence": narrative_info["sentence"],
+            "keyword": narrative_info["keyword"],
+            "suggested_fix": "Use economic magnitude change (|curr| - |prev|) for expense referents.",
+        }
+
+    return {
+        "valid": False,
+        "status": "DIRECTIONAL_CONTRADICTION",
+        "narrative_direction": narr_dir,
+        "calculated_direction": calc_dir,
+        "reason": (
+            f"Directional contradiction: Narrative evidence indicates '{narr_dir}' "
+            f"('{narrative_info['sentence']}'), but claimed/calculated result is {calc_dir} ({claimed_value})."
+        ),
+        "supporting_sentence": narrative_info["sentence"],
+        "keyword": narrative_info["keyword"],
+    }
 
 
 def validate_operand(
@@ -414,15 +599,6 @@ def validate_operand(
 
     # --------------------------------------------------
     # 4. Check operand-specific period.
-    #
-    # IMPORTANT:
-    # Each operand can belong to a different period.
-    #
-    # Example:
-    #   op_2009 -> 2009
-    #   op_2008 -> 2008
-    #
-    # Do NOT use referent["period"] here.
     # --------------------------------------------------
 
     operand_period = operand.get(
@@ -481,10 +657,13 @@ def validate_operand(
         )
     }
 
+
 def validate_claim(
     claim,
     lookup,
-    example_id
+    example_id,
+    context_texts=None,
+    check_direction=True,
 ):
     """
     Validate a complete structured claim.
@@ -495,6 +674,7 @@ def validate_claim(
         - verification status
         - explanation
         - individual operand results
+        - directional check result (if applicable)
     """
 
     # --------------------------------------------------
@@ -513,18 +693,23 @@ def validate_claim(
             "valid": False,
             "status": "INVALID_SCHEMA",
             "reason": schema_message,
-            "operands": []
+            "operands": [],
+            "direction_check": None,
         }
 
     # --------------------------------------------------
-    # 2. Validate every claim.
+    # 2. Validate every claim and operand.
     # --------------------------------------------------
 
     operand_results = []
-
     all_valid = True
 
+    final_claim_id = claim.get("final_claim_id")
+    final_claim = None
+
     for current_claim in claim["claims"]:
+        if current_claim.get("id") == final_claim_id:
+            final_claim = current_claim
 
         referent = current_claim.get(
             "referent"
@@ -546,42 +731,82 @@ def validate_claim(
             )
 
             if not result["valid"]:
-
                 all_valid = False
 
+    if not all_valid:
+        return {
+            "valid": False,
+            "status": "INVALID_EVIDENCE",
+            "reason": (
+                "One or more operands could not "
+                "be verified against the cited evidence."
+            ),
+            "operands": operand_results,
+            "direction_check": None,
+        }
+
     # --------------------------------------------------
-    # 3. Produce final verification status.
+    # 3. Optional Directional & Narrative Consistency Check
+    # --------------------------------------------------
+    direction_result = None
+
+    if check_direction and final_claim:
+        # Collect narrative passages from context_texts and cited chunks
+        collected_texts = []
+        if context_texts:
+            if isinstance(context_texts, list):
+                collected_texts.extend(context_texts)
+            elif isinstance(context_texts, str):
+                collected_texts.append(context_texts)
+
+        for cid in final_claim.get("citations", []):
+            chunk = find_chunk(lookup, example_id, cid)
+            if chunk and chunk.get("text"):
+                collected_texts.append(chunk["text"])
+
+        for op in final_claim.get("operands", []):
+            if op.get("context_text"):
+                collected_texts.append(op["context_text"])
+
+        if collected_texts:
+            direction_result = validate_narrative_direction(
+                claimed_value=final_claim.get("value"),
+                evidence_texts=collected_texts,
+                referent=final_claim.get("referent"),
+                claimed_direction=final_claim.get("direction"),
+            )
+
+            if not direction_result["valid"]:
+                return {
+                    "valid": False,
+                    "status": direction_result["status"],
+                    "reason": direction_result["reason"],
+                    "operands": operand_results,
+                    "direction_check": direction_result,
+                }
+
+    # --------------------------------------------------
+    # 4. Produce final verification status.
     # --------------------------------------------------
 
-    if all_valid:
-
-        status = "VERIFIED_EVIDENCE"
-
-        reason = (
-            "All operands are anchored to "
-            "valid evidence spans, values, "
-            "periods, and units."
-        )
-
+    status = "VERIFIED_EVIDENCE"
+    reason = (
+        "All operands are anchored to valid evidence spans, values, "
+        "periods, and units"
+    )
+    if direction_result and direction_result["valid"]:
+        reason += f", and narrative direction is verified ({direction_result['status']})."
     else:
-
-        status = "INVALID_EVIDENCE"
-
-        reason = (
-            "One or more operands could not "
-            "be verified against the cited evidence."
-        )
+        reason += "."
 
     return {
-        "valid": all_valid,
+        "valid": True,
         "status": status,
         "reason": reason,
-        "operands": operand_results
+        "operands": operand_results,
+        "direction_check": direction_result,
     }
 
 
 if __name__ == "__main__":
-
-    print(
-        "validator.py loaded successfully."
-    )
+    print("validator.py loaded successfully.")

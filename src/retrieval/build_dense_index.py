@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import torch
 from sentence_transformers import SentenceTransformer
 
 
@@ -9,6 +10,7 @@ CORPUS_PATH = Path("data/finqa/train_chunks.jsonl")
 EMBEDDINGS_PATH = Path("data/finqa/train_embeddings.npy")
 
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def load_corpus() -> list[dict]:
@@ -28,9 +30,9 @@ def main() -> None:
 
     print(f"Loaded {len(chunks)} chunks.")
 
-    print(f"Loading embedding model: {MODEL_NAME}")
+    print(f"Loading embedding model: {MODEL_NAME} (Device: {DEVICE})")
 
-    model = SentenceTransformer(MODEL_NAME, device="cuda")
+    model = SentenceTransformer(MODEL_NAME, device=DEVICE)
 
     texts = [chunk["text"] for chunk in chunks]
 

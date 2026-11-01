@@ -1,3 +1,4 @@
+import torch
 import json
 from pathlib import Path
 
@@ -167,7 +168,7 @@ def main():
 
     dense_model = SentenceTransformer(
         MODEL_NAME,
-        device="cuda",
+        device=("cuda" if torch.cuda.is_available() else "cpu"),
     )
 
     # --------------------------------------------------
