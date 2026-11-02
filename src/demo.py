@@ -185,36 +185,43 @@ def main():
     corpus_path = Path("data/finqa/train_chunks.jsonl")
     embeddings_path = Path("data/finqa/train_embeddings.npy")
 
-    if corpus_path.exists() and embeddings_path.exists():
-        from rrf_retriever import (
-            load_corpus,
-            build_bm25,
-            bm25_search,
-            dense_search,
-            reciprocal_rank_fusion,
-            BM25_TOP_K,
-            DENSE_TOP_K,
-            RRF_K,
-            MODEL_NAME,
-        )
-        import torch
-        import numpy as np
-        from sentence_transformers import SentenceTransformer
+    retrieved_chunks = None
 
-        print("Executing hybrid BM25 + Dense RRF retrieval on full index...")
-        chunks = load_corpus()
-        bm25 = build_bm25(chunks)
-        bm25_res = bm25_search(QUESTION, bm25, BM25_TOP_K)
-        embeddings = np.load(embeddings_path)
-        model = SentenceTransformer(
-            MODEL_NAME,
-            device=("cuda" if torch.cuda.is_available() else "cpu"),
-        )
-        dense_res = dense_search(QUESTION, model, embeddings, DENSE_TOP_K)
-        fused = reciprocal_rank_fusion(bm25_res, dense_res, RRF_K)
-        retrieved_chunks = [chunks[idx] for idx, _ in fused if chunks[idx]["example_id"] == EXAMPLE_ID]
-    else:
-        print("Note: Pre-indexed corpus not on disk. Displaying benchmark evidence for target filing:")
+    if corpus_path.exists() and embeddings_path.exists():
+        try:
+            from rrf_retriever import (
+                load_corpus,
+                build_bm25,
+                bm25_search,
+                dense_search,
+                reciprocal_rank_fusion,
+                BM25_TOP_K,
+                DENSE_TOP_K,
+                RRF_K,
+                MODEL_NAME,
+            )
+            import torch
+            import numpy as np
+            from sentence_transformers import SentenceTransformer
+
+            print("Executing hybrid BM25 + Dense RRF retrieval on full index...")
+            chunks = load_corpus()
+            bm25 = build_bm25(chunks)
+            bm25_res = bm25_search(QUESTION, bm25, BM25_TOP_K)
+            embeddings = np.load(embeddings_path)
+            model = SentenceTransformer(
+                MODEL_NAME,
+                device=("cuda" if torch.cuda.is_available() else "cpu"),
+            )
+            dense_res = dense_search(QUESTION, model, embeddings, DENSE_TOP_K)
+            fused = reciprocal_rank_fusion(bm25_res, dense_res, RRF_K)
+            retrieved_chunks = [chunks[idx] for idx, _ in fused if chunks[idx]["example_id"] == EXAMPLE_ID]
+        except ImportError as e:
+            print(f"Note: Could not run full retrieval ({e}). Use 'uv run src/demo.py' for full ML retrieval.")
+
+    if not retrieved_chunks:
+        if not (corpus_path.exists() and embeddings_path.exists()):
+            print("Note: Pre-indexed corpus not on disk. Displaying benchmark evidence for target filing:")
         retrieved_chunks = TARGET_CHUNKS
 
     for rank, chunk in enumerate(retrieved_chunks[:2], start=1):
