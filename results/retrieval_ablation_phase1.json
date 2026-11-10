@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "evaluation_timestamp": "2026-11-03T16:43:04Z",
+    "split": "train",
+    "queries_evaluated": 20,
+    "query_ids": [
+      "ADI/2009/page_49.pdf-1",
+      "ABMD/2012/page_75.pdf-1",
+      "AAL/2018/page_13.pdf-2",
+      "INTC/2013/page_71.pdf-4",
+      "ETR/2008/page_313.pdf-3",
+      "C/2010/page_272.pdf-1",
+      "AMT/2012/page_121.pdf-1",
+      "GIS/2019/page_45.pdf-1",
+      "IPG/2009/page_89.pdf-3",
+      "CDNS/2018/page_32.pdf-2",
+      "GIS/2008/page_83.pdf-1",
+      "PNC/2012/page_110.pdf-3",
+      "AAL/2015/page_74.pdf-1",
+      "ETR/2008/page_376.pdf-2",
+      "GS/2014/page_47.pdf-3",
+      "AAL/2014/page_89.pdf-3",
+      "SWKS/2011/page_82.pdf-1",
+      "WRK/2018/page_56.pdf-3",
+      "KHC/2017/page_21.pdf-4",
+      "INTC/2013/page_71.pdf-2"
+    ],
+    "corpus_path": "data\\finqa\\train_chunks.jsonl",
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "cross_encoder_model": "BAAI/bge-reranker-base",
+    "parameters": {
+      "top_k": 100,
+      "rrf_k": 60,
+      "pool_size": 50,
+      "rerank_top_k": 10
+    }
+  },
+  "results": [
+    {
+      "method": "RRF",
+      "evaluated": 20,
+      "no_gold": 0,
+      "span_hit_at_1": 0.15,
+      "span_hit_at_5": 0.25,
+      "span_hit_at_10": 0.25,
+      "span_recall_at_1": 0.075,
+      "span_recall_at_5": 0.125,
+      "span_recall_at_10": 0.125,
+      "span_mrr": 0.1998,
+      "page_hit_at_1": 0.05,
+      "page_hit_at_5": 0.3,
+      "page_hit_at_10": 0.35,
+      "page_recall_at_1": 0.05,
+      "page_recall_at_5": 0.3,
+      "page_recall_at_10": 0.35,
+      "page_mrr": 0.1708
+    }
+  ]
+}

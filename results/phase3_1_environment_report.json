@@ -1,0 +1,55 @@
+{
+  "phase": "3.1",
+  "python_ml_version": "3.11.16 (main, Sep  1 2026, 14:15:24) [MSC v.1944 64 bit (AMD64)]",
+  "pytorch_version": "2.14.1+cu126",
+  "cuda_available": true,
+  "cuda_runtime_version": "12.6",
+  "gpu_model": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "gpu_vram_total_mb": 8187.5,
+  "gpu_compute_capability": [
+    8,
+    9
+  ],
+  "fp16_supported": true,
+  "bf16_supported": true,
+  "packages": {
+    "transformers": "5.18.0",
+    "safetensors": "0.8.0",
+    "sentence_transformers": "6.1.0",
+    "jsonschema": "4.26.0",
+    "pydantic": "2.13.5",
+    "rank_bm25": "installed"
+  },
+  "quantization_libraries": {
+    "accelerate": "not_installed",
+    "bitsandbytes": "not_installed",
+    "optimum": "not_installed",
+    "auto_gptq": "not_installed",
+    "vllm": "not_installed"
+  },
+  "hf_model_cache_status": {
+    "Qwen/Qwen2.5-3B-Instruct": {
+      "cached": false,
+      "folder": null
+    },
+    "Qwen/Qwen2.5-7B-Instruct": {
+      "cached": false,
+      "folder": null
+    },
+    "BAAI/bge-reranker-base": {
+      "cached": true,
+      "folder": "models--BAAI--bge-reranker-base"
+    },
+    "BAAI/bge-small-en-v1.5": {
+      "cached": true,
+      "folder": "models--BAAI--bge-small-en-v1.5"
+    }
+  },
+  "test_suite": {
+    "total_collected": 205,
+    "passed": 203,
+    "skipped": 2,
+    "failed": 0,
+    "runtime_seconds": 3.54
+  }
+}

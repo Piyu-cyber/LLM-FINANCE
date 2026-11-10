@@ -1,0 +1,21 @@
+{
+  "dataset_split": "dev",
+  "dataset_path": "data\\finqa\\dataset\\dev.json",
+  "dataset_size": 883,
+  "corpus_path": "data\\finqa\\dev_chunks.jsonl",
+  "corpus_size": 25007,
+  "embeddings_path": "data\\finqa\\dev_embeddings.npy",
+  "dense_model_name": "BAAI/bge-small-en-v1.5",
+  "cross_encoder_model_name": "BAAI/bge-reranker-base",
+  "random_seed": 42,
+  "parameters": {
+    "top_k": 100,
+    "rrf_k": 60,
+    "dense_batch_size": 64
+  },
+  "hardware_info": {
+    "gpu_model": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "compute_capability": "8.9",
+    "total_vram_mb": 8187.5
+  }
+}

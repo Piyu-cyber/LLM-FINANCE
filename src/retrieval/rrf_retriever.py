@@ -89,33 +89,42 @@ def dense_search(
     ]
 
 
-def reciprocal_rank_fusion(
-    bm25_results: List[tuple[int, float]],
-    dense_results: List[tuple[int, float]],
-    k: int = 60,
-) -> List[tuple[int, float]]:
+def get_chunk_uid(chunk: Dict[str, Any]) -> str:
+    """Return a deterministic, stable unique identifier for a chunk."""
+    example_id = str(chunk.get("example_id", "")).strip()
+    chunk_id = str(chunk.get("chunk_id", "")).strip()
+    if example_id and chunk_id:
+        return f"{example_id}#{chunk_id}"
+    if "id" in chunk and chunk["id"]:
+        return str(chunk["id"]).strip()
+    return str(chunk.get("text", "")[:64])
 
-    rrf_scores = {}
+
+def reciprocal_rank_fusion(
+    bm25_results: List[tuple[Any, float]],
+    dense_results: List[tuple[Any, float]],
+    k: int = 60,
+) -> List[tuple[Any, float]]:
+    """Merge ranked results using Reciprocal Rank Fusion on stable identifiers."""
+    rrf_scores: Dict[Any, float] = {}
 
     # BM25 ranking
-    for rank, (index, _) in enumerate(
+    for rank, (item_id, _) in enumerate(
         bm25_results,
         start=1,
     ):
-
-        rrf_scores[index] = (
-            rrf_scores.get(index, 0.0)
+        rrf_scores[item_id] = (
+            rrf_scores.get(item_id, 0.0)
             + 1.0 / (k + rank)
         )
 
     # Dense ranking
-    for rank, (index, _) in enumerate(
+    for rank, (item_id, _) in enumerate(
         dense_results,
         start=1,
     ):
-
-        rrf_scores[index] = (
-            rrf_scores.get(index, 0.0)
+        rrf_scores[item_id] = (
+            rrf_scores.get(item_id, 0.0)
             + 1.0 / (k + rank)
         )
 
@@ -137,6 +146,7 @@ def retrieve(
     top_k: int = RERANK_TOP_K,
     pool_size: int = 50,
     reranker_type: str = "cross_encoder",
+    reranker: Optional[Any] = None,
     apply_metadata_boosting: bool = True,
     expand_parents: bool = False,
     corpus_index: Optional[Dict[str, List[Dict[str, Any]]]] = None,
@@ -161,6 +171,8 @@ def retrieve(
         Candidate pool size passed from RRF to the reranker.
     reranker_type : str
         'cross_encoder' (default BAAI/bge-reranker-base), 'colbert', or 'none'.
+    reranker : Any, optional
+        Injected reranker instance (avoids reloading model weights).
     apply_metadata_boosting : bool
         Whether to boost candidate scores based on company and fiscal-year matches.
     expand_parents : bool
@@ -177,8 +189,26 @@ def retrieve(
     bm25_res = bm25_search(query, bm25, BM25_TOP_K)
     dense_res = dense_search(query, dense_model, embeddings, DENSE_TOP_K)
 
-    # 2. Reciprocal Rank Fusion
-    fused_results = reciprocal_rank_fusion(bm25_res, dense_res, RRF_K)
+    # Build unique chunk lookup to support stable chunk identifiers and handle duplicates
+    uid_to_chunk: Dict[str, Dict[str, Any]] = {}
+    for c in chunks:
+        uid = get_chunk_uid(c)
+        if uid not in uid_to_chunk:
+            uid_to_chunk[uid] = c
+
+    bm25_uid_results = [
+        (get_chunk_uid(chunks[idx]), score)
+        for idx, score in bm25_res
+        if idx < len(chunks)
+    ]
+    dense_uid_results = [
+        (get_chunk_uid(chunks[idx]), score)
+        for idx, score in dense_res
+        if idx < len(chunks)
+    ]
+
+    # 2. Reciprocal Rank Fusion on stable chunk UIDs
+    fused_results = reciprocal_rank_fusion(bm25_uid_results, dense_uid_results, RRF_K)
 
     # 3. Candidate pool extraction & optional metadata boosting
     meta = parse_query(query) if apply_metadata_boosting else None
@@ -186,8 +216,11 @@ def retrieve(
     fiscal_years = meta["fiscal_years"] if meta else []
 
     candidate_pool = []
-    for index, rrf_score in fused_results[:pool_size]:
-        chunk = chunks[index].copy()
+    for uid, rrf_score in fused_results[:pool_size]:
+        if uid not in uid_to_chunk:
+            continue
+        chunk = uid_to_chunk[uid].copy()
+        chunk["chunk_uid"] = uid
         chunk["rrf_score"] = float(rrf_score)
 
         if apply_metadata_boosting:
@@ -201,14 +234,20 @@ def retrieve(
     if apply_metadata_boosting:
         candidate_pool.sort(key=lambda x: x["rrf_score_boosted"], reverse=True)
 
-    # 4. Reranking
+    # 4. Reranking (using cached singleton or injected instance)
     if reranker_type == "cross_encoder":
-        from cross_encoder_reranker import CrossEncoderReranker
-        reranker = CrossEncoderReranker()
-        final_results = reranker.rerank(query, candidate_pool, top_k=top_k)
+        if reranker is None:
+            from cross_encoder_reranker import get_cross_encoder
+            reranker_inst = get_cross_encoder()
+        else:
+            reranker_inst = reranker
+        final_results = reranker_inst.rerank(query, candidate_pool, top_k=top_k)
     elif reranker_type == "colbert":
-        reranker = ColBERTReranker()
-        final_results = colbert_rerank(query, candidate_pool, reranker, top_k=top_k)
+        if reranker is None:
+            reranker_inst = ColBERTReranker()
+        else:
+            reranker_inst = reranker
+        final_results = colbert_rerank(query, candidate_pool, reranker_inst, top_k=top_k)
     else:
         final_results = candidate_pool[:top_k]
 

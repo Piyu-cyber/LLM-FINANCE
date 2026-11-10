@@ -299,83 +299,175 @@ def value_matches_evidence(
     return False
 
 
+class UnitCategory:
+    USD = "usd"
+    THOUSAND_USD = "thousand_usd"
+    MILLION_USD = "million_usd"
+    BILLION_USD = "billion_usd"
+    PERCENT = "percent"
+    SHARES = "shares"
+    THOUSAND_SHARES = "thousand_shares"
+    MILLION_SHARES = "million_shares"
+    USD_PER_SHARE = "usd_per_share"
+    UNKNOWN = "unknown"
+
+
+def normalize_unit(unit_str: str) -> str:
+    """Normalize user or claim unit string to canonical financial unit category."""
+    if not unit_str or not isinstance(unit_str, str):
+        return UnitCategory.UNKNOWN
+
+    u = unit_str.lower().strip()
+
+    if ("per share" in u or "/ share" in u or "/share" in u) and any(c in u for c in ["$", "usd", "dollar"]):
+        return UnitCategory.USD_PER_SHARE
+
+    if "%" in u or "percent" in u or "percentage" in u or "basis point" in u or "bps" in u:
+        return UnitCategory.PERCENT
+
+    if "share" in u or "shares" in u:
+        if "billion" in u:
+            return "billion_shares"
+        if "million" in u:
+            return UnitCategory.MILLION_SHARES
+        if "thousand" in u:
+            return UnitCategory.THOUSAND_SHARES
+        return UnitCategory.SHARES
+
+    if "billion" in u:
+        return UnitCategory.BILLION_USD
+
+    if "million" in u or "mm" in u.split():
+        return UnitCategory.MILLION_USD
+
+    if "thousand" in u or "k" in u.split():
+        return UnitCategory.THOUSAND_USD
+
+    if any(c in u for c in ["$", "usd", "dollar", "dollars", "us dollar", "us dollars", "us$"]):
+        return UnitCategory.USD
+
+    return u
+
+
 def period_matches_evidence(
     claimed_period,
     evidence_text
-):
-    """
-    Check whether the claimed period/year
-    occurs in the evidence.
-    """
-
-    if claimed_period is None:
+) -> bool:
+    """Check whether the claimed period/year occurs in the evidence using
+    exact boundary-aware matching."""
+    if claimed_period is None or not evidence_text:
         return False
 
-    period = str(
-        claimed_period
-    ).strip()
-
-    if not period:
+    period_str = str(claimed_period).strip()
+    if not period_str:
         return False
 
-    return period in evidence_text
+    evidence = str(evidence_text)
+
+    # 1. Year range: e.g. "2008-2009", "2008 to 2009", "2008/2009"
+    range_match = re.search(r"\b(19\d{2}|20\d{2})\s*(?:-|to|/|–)\s*(19\d{2}|20\d{2})\b", period_str, re.IGNORECASE)
+    if range_match:
+        y1, y2 = range_match.group(1), range_match.group(2)
+        direct_range = rf"\b{re.escape(y1)}\s*(?:-|to|/|–)\s*{re.escape(y2)}\b"
+        if re.search(direct_range, evidence, re.IGNORECASE):
+            return True
+        p1 = rf"\b{re.escape(y1)}\b"
+        p2 = rf"\b{re.escape(y2)}\b"
+        return bool(re.search(p1, evidence) and re.search(p2, evidence))
+
+    # 2. 4-digit year: e.g. "2008", "2009", "1999"
+    year_4digit = re.search(r"^(19\d{2}|20\d{2})$", period_str)
+    if year_4digit:
+        year = year_4digit.group(1)
+        pattern = rf"(?:\bFY\s*|\b){re.escape(year)}\b"
+        return bool(re.search(pattern, evidence, re.IGNORECASE))
+
+    # 3. Fiscal year with prefix: e.g. "FY2009", "FY 2009", "FY09"
+    fy_match = re.search(r"^FY\s*(\d{2,4})$", period_str, re.IGNORECASE)
+    if fy_match:
+        digits = fy_match.group(1)
+        if len(digits) == 4:
+            pattern = rf"(?:\bFY\s*|\b){re.escape(digits)}\b"
+            return bool(re.search(pattern, evidence, re.IGNORECASE))
+        elif len(digits) == 2:
+            full_year = f"20{digits}"
+            pattern = rf"(?:\bFY\s*|\b|\'|’){re.escape(digits)}\b|\b{re.escape(full_year)}\b"
+            return bool(re.search(pattern, evidence, re.IGNORECASE))
+
+    # 4. Quarterly period: e.g. "Q1 2009", "1Q 2009", "2009 Q1"
+    q_match = re.search(r"^(?:(Q[1-4]|[1-4]Q)\s*(\d{2,4})|(\d{4})\s*(Q[1-4]|[1-4]Q))$", period_str, re.IGNORECASE)
+    if q_match:
+        pattern = rf"\b{re.escape(period_str)}\b"
+        if re.search(pattern, evidence, re.IGNORECASE):
+            return True
+
+    # 5. Fallback for numeric periods: reject partial digits
+    if period_str.isdigit():
+        pattern = rf"(?<!\d){re.escape(period_str)}(?!\d)"
+        return bool(re.search(pattern, evidence))
+
+    # General word-boundary match
+    pattern = rf"\b{re.escape(period_str)}\b"
+    return bool(re.search(pattern, evidence, re.IGNORECASE))
 
 
 def unit_matches_evidence(
     claimed_unit,
     evidence_text
-):
-    """
-    Perform a basic unit consistency check.
-
-    This is intentionally conservative.
-    More sophisticated unit normalization
-    can be added later.
-    """
-
-    if not claimed_unit:
+) -> bool:
+    """Perform robust financial unit consistency check."""
+    if not claimed_unit or not evidence_text:
         return False
 
-    unit = claimed_unit.lower().strip()
-
+    cat = normalize_unit(claimed_unit)
     text = evidence_text.lower()
 
-    unit_aliases = {
+    has_usd_symbol = bool(re.search(r"(\$|usd\b|dollars?\b)", text))
+    has_percent = bool(re.search(r"(%|percent\b|percentage\b|pct\b)", text))
+    has_shares = bool(re.search(r"\bshares?\b", text))
+    has_per_share = bool(re.search(r"(\bper\s+share|/\s*share)", text))
 
-        "million usd": [
-            "million",
-            "millions",
-            "million dollars",
-            "millions of dollars",
-            "usd",
-            "$"
-        ],
+    has_billion = bool(re.search(r"\b(billions?|in\s+billions?|billions?\s+of\s+dollars?)\b", text))
+    has_million = bool(re.search(r"\b(millions?|in\s+millions?|millions?\s+of\s+dollars?)\b", text))
+    has_thousand = bool(re.search(r"\b(thousands?|in\s+thousands?|thousands?\s+of\s+dollars?)\b", text))
 
-        "billion usd": [
-            "billion",
-            "billions",
-            "billion dollars",
-            "billions of dollars",
-            "usd",
-            "$"
-        ],
+    if cat == UnitCategory.BILLION_USD:
+        return has_billion and not (has_million and not has_billion) and not (has_shares and not has_billion)
 
-        "percent": [
-            "%",
-            "percent",
-            "percentage"
-        ],
-    }
+    elif cat == UnitCategory.MILLION_USD:
+        return has_million and not (has_billion and not has_million) and not (has_shares and not has_million)
 
-    aliases = unit_aliases.get(
-        unit,
-        [unit]
-    )
+    elif cat == UnitCategory.THOUSAND_USD:
+        return has_thousand and not (has_million or has_billion) and not (has_shares and not has_thousand)
 
-    return any(
-        alias in text
-        for alias in aliases
-    )
+    elif cat == UnitCategory.USD:
+        if not (has_usd_symbol or "$" in text):
+            return False
+        if has_billion or has_million or has_thousand:
+            return False
+        if has_percent or has_shares:
+            return False
+        return True
+
+    elif cat == UnitCategory.PERCENT:
+        return has_percent and not (has_shares and not has_percent)
+
+    elif cat == UnitCategory.SHARES:
+        if has_percent or (has_usd_symbol and not has_shares):
+            return False
+        return has_shares and not (has_million or has_thousand or has_billion)
+
+    elif cat == UnitCategory.MILLION_SHARES:
+        return has_shares and has_million
+
+    elif cat == UnitCategory.THOUSAND_SHARES:
+        return has_shares and has_thousand
+
+    elif cat == UnitCategory.USD_PER_SHARE:
+        return has_per_share and (has_usd_symbol or "$" in text)
+
+    else:
+        return bool(re.search(rf"\b{re.escape(str(claimed_unit).lower().strip())}\b", text))
 
 
 def extract_narrative_direction(text, metric=None):
@@ -606,11 +698,13 @@ def validate_operand(
     )
 
     if operand_period:
+        period_found = (
+            period_matches_evidence(operand_period, span_text)
+            or (operand.get("context_text") and period_matches_evidence(operand_period, operand["context_text"]))
+            or (chunk_text and period_matches_evidence(operand_period, chunk_text))
+        )
 
-        if not period_matches_evidence(
-            operand_period,
-            span_text
-        ):
+        if not period_found:
 
             return {
                 "valid": False,

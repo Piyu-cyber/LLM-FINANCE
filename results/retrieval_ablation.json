@@ -1,0 +1,45 @@
+[
+  {
+    "method": "BM25",
+    "evaluated": 6251,
+    "no_gold": 0,
+    "span_recall_at_1": 0.1117,
+    "span_recall_at_5": 0.143,
+    "span_recall_at_10": 0.1614,
+    "span_mrr": 0.1254,
+    "page_recall_at_1": 0.0968,
+    "page_recall_at_5": 0.3353,
+    "page_recall_at_10": 0.4358,
+    "page_mrr": 0.2074
+  },
+  {
+    "method": "Dense",
+    "evaluated": 6251,
+    "no_gold": 0,
+    "span_recall_at_1": 0.1169,
+    "span_recall_at_5": 0.1465,
+    "span_recall_at_10": 0.1648,
+    "span_mrr": 0.1295,
+    "page_recall_at_1": 0.1397,
+    "page_recall_at_5": 0.4774,
+    "page_recall_at_10": 0.5836,
+    "page_mrr": 0.2884
+  },
+  {
+    "method": "RRF",
+    "evaluated": 6251,
+    "no_gold": 0,
+    "span_recall_at_1": 0.1454,
+    "span_recall_at_5": 0.1798,
+    "span_recall_at_10": 0.2022,
+    "span_mrr": 0.1619,
+    "page_recall_at_1": 0.1261,
+    "page_recall_at_5": 0.4596,
+    "page_recall_at_10": 0.5946,
+    "page_mrr": 0.2773
+  },
+  {
+    "method": "RRF+CE",
+    "evaluated": 0
+  }
+]

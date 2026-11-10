@@ -1,0 +1,1 @@
+{"timestamp": 1790946911.8592956, "model": "test-model", "prompt": "What is 2 + 2?", "output": "4", "input_tokens": 5, "output_tokens": 1, "latency_ms": 100.5, "seed": 42}

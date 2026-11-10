@@ -1,0 +1,137 @@
+[
+  {
+    "example_id": "PM/2017/page_38.pdf-1",
+    "question": "what was the change in millions of operating income from 2016 to 2017?",
+    "gold_program": "subtract(11503, 10815)",
+    "gold_answer": 688.0,
+    "status": "REPAIR_FAILED",
+    "detailed_status": "SCHEMA_VALIDATION_ERROR",
+    "is_verified": false,
+    "verified_answer": null,
+    "is_accurate": false,
+    "context_token_count": 539,
+    "prompt_tokens": 1336,
+    "completion_tokens": 197,
+    "raw_text": " ```json\n{\n  \"value\": 688,\n  \"program\": [\n    {\n      \"operation\": \"economic_change\",\n      \"operands\": [\n        \"table_2:for the years ended december 31 , 2017\",\n        \"table_2:for the years ended december 31 , 2016\"\n      ]\n    }\n  ],\n  \"operands\": [],\n  \"status\": \"sufficient_evidence\"\n}\n``` ```json\n{\n  \"value\": 688,\n  \"program\": [\n    {\n      \"operation\": \"economic_change\",\n      \"operands\": [\n        \"table_2:for the years ended december 31 , 2017\",\n        \"table_2:for the years ended december 31 , 2016\"\n      ]\n    }\n  ],\n  \"operands\": [],\n  \"status\": \"sufficient_evidence\"\n}\n```",
+    "parsed_claim": null,
+    "error_diagnostics": [
+      "Schema validation error at 'root': 'claims' is a required property"
+    ],
+    "repair_attempted": true,
+    "repair_eligible": true,
+    "repair_audit": {
+      "attempt_number": 1,
+      "is_repairable": true,
+      "repairability_category": "SYNTAX",
+      "repairability_reason": "JSON formatting or decoding error is repairable via constrained re-prompting.",
+      "diagnostic_feedback": [
+        "JSON syntax error: Expecting value at line 1 col 2"
+      ],
+      "repair_prompt_preview": "You are a senior SEC 10-K financial analyst and symbolic reasoning engine.\nYour task is to answer financial questions based strictly on the provided evidence chunks from SEC 10-K filings.\n\nCRITICAL INVARIANTS:\n1. Grounding: Answer using ONLY facts, numbers",
+      "has_repaired_claim": false,
+      "reverification_status": "REPAIR_FAILED",
+      "reverification_detailed_status": "SCHEMA_VALIDATION_ERROR",
+      "reverification_passed": false,
+      "generation_latency_ms": 21215.132,
+      "verification_latency_ms": 11.02,
+      "total_repair_latency_ms": 21226.185
+    },
+    "latencies_ms": {
+      "retrieval": 0.0,
+      "context": 2.33,
+      "generation": 56863.22,
+      "verification": 11.09,
+      "total": 56876.82
+    }
+  },
+  {
+    "example_id": "ETR/2011/page_341.pdf-3",
+    "question": "in 2010 what was the net change in net revenue in millions",
+    "gold_program": "add(18.9, 0.3)",
+    "gold_answer": 19.2,
+    "status": "REPAIR_FAILED",
+    "detailed_status": "SCHEMA_VALIDATION_ERROR",
+    "is_verified": false,
+    "verified_answer": null,
+    "is_accurate": false,
+    "context_token_count": 381,
+    "prompt_tokens": 1174,
+    "completion_tokens": 256,
+    "raw_text": " ```json\n{\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"claim_text\": \"Net revenue increased by 18.6 million USD from 2009 to 2010.\",\n      \"value\": 18.6,\n      \"unit\": \"million USD\",\n      \"operation\": \"economic_change\"\n    }\n  ],\n  \"operands\": [\n    {\n      \"id\": \"o1\",\n      \"span_text\": \"$ 536.7\"\n    },\n    {\n      \"id\": \"o2\",\n      \"span_text\": \"$ 555.3\"\n    }\n  ],\n  \"program\": [\n    {\n      \"id\": \"p1\",\n      \"operation\": \"economic_change\",\n      \"operands\": [\n        {\n          \"id\": \"o1\"\n        },\n        {\n          \"id\": \"o2\"\n        }\n      ]\n    }\n  ]\n}\n``` Here is the corrected structured claim JSON adhering to the schema:\n\n```json\n{\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"claim_text\": \"Net revenue increased by 18.6 million USD from 2009 to 201",
+    "parsed_claim": null,
+    "error_diagnostics": [
+      "Schema validation error at 'root': 'final_claim_id' is a required property"
+    ],
+    "repair_attempted": true,
+    "repair_eligible": true,
+    "repair_audit": {
+      "attempt_number": 1,
+      "is_repairable": true,
+      "repairability_category": "SYNTAX",
+      "repairability_reason": "JSON formatting or decoding error is repairable via constrained re-prompting.",
+      "diagnostic_feedback": [
+        "JSON syntax error: Expecting value at line 1 col 2"
+      ],
+      "repair_prompt_preview": "You are a senior SEC 10-K financial analyst and symbolic reasoning engine.\nYour task is to answer financial questions based strictly on the provided evidence chunks from SEC 10-K filings.\n\nCRITICAL INVARIANTS:\n1. Grounding: Answer using ONLY facts, numbers",
+      "has_repaired_claim": false,
+      "reverification_status": "REPAIR_FAILED",
+      "reverification_detailed_status": "SCHEMA_VALIDATION_ERROR",
+      "reverification_passed": false,
+      "generation_latency_ms": 26366.768,
+      "verification_latency_ms": 9.897,
+      "total_repair_latency_ms": 26376.693
+    },
+    "latencies_ms": {
+      "retrieval": 0.0,
+      "context": 2.13,
+      "generation": 59828.31,
+      "verification": 9.96,
+      "total": 59840.58
+    }
+  },
+  {
+    "example_id": "JPM/2008/page_85.pdf-3",
+    "question": "what was jpmorgan chase & co's common equity tier 1 ( cet1 ) ratio in 2008?",
+    "gold_program": "divide(136104, 1244659)",
+    "gold_answer": 0.10935,
+    "status": "REPAIR_FAILED",
+    "detailed_status": "SCHEMA_VALIDATION_ERROR",
+    "is_verified": false,
+    "verified_answer": null,
+    "is_accurate": false,
+    "context_token_count": 553,
+    "prompt_tokens": 1355,
+    "completion_tokens": 23,
+    "raw_text": " ```json\n{\n  \"value\": null,\n  \"operands\": [],\n  \"program\": []\n}\n```",
+    "parsed_claim": null,
+    "error_diagnostics": [
+      "Schema validation error at 'root': 'claims' is a required property"
+    ],
+    "repair_attempted": true,
+    "repair_eligible": true,
+    "repair_audit": {
+      "attempt_number": 1,
+      "is_repairable": true,
+      "repairability_category": "SYNTAX",
+      "repairability_reason": "JSON formatting or decoding error is repairable via constrained re-prompting.",
+      "diagnostic_feedback": [
+        "JSON syntax error: Expecting value at line 1 col 2"
+      ],
+      "repair_prompt_preview": "You are a senior SEC 10-K financial analyst and symbolic reasoning engine.\nYour task is to answer financial questions based strictly on the provided evidence chunks from SEC 10-K filings.\n\nCRITICAL INVARIANTS:\n1. Grounding: Answer using ONLY facts, numbers",
+      "has_repaired_claim": false,
+      "reverification_status": "REPAIR_FAILED",
+      "reverification_detailed_status": "SCHEMA_VALIDATION_ERROR",
+      "reverification_passed": false,
+      "generation_latency_ms": 2982.208,
+      "verification_latency_ms": 9.397,
+      "total_repair_latency_ms": 2991.631
+    },
+    "latencies_ms": {
+      "retrieval": 0.0,
+      "context": 2.91,
+      "generation": 36453.14,
+      "verification": 9.45,
+      "total": 36465.67
+    }
+  }
+]

@@ -1,0 +1,63 @@
+{
+  "gpu_info": {
+    "model": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "compute_capability": "8.9",
+    "total_vram_mb": 8187.5,
+    "fp16_supported": true,
+    "bf16_supported": true
+  },
+  "embedding_batch_profiles": [
+    {
+      "batch_size": 32,
+      "chunks_processed": 1024,
+      "duration_sec": 0.8407,
+      "throughput_chunks_per_sec": 1218.01,
+      "peak_allocated_vram_mb": 197.7,
+      "peak_reserved_vram_mb": 260.0
+    },
+    {
+      "batch_size": 64,
+      "chunks_processed": 1024,
+      "duration_sec": 0.6697,
+      "throughput_chunks_per_sec": 1529.0,
+      "peak_allocated_vram_mb": 259.98,
+      "peak_reserved_vram_mb": 356.0
+    },
+    {
+      "batch_size": 128,
+      "chunks_processed": 1024,
+      "duration_sec": 0.6384,
+      "throughput_chunks_per_sec": 1604.13,
+      "peak_allocated_vram_mb": 380.99,
+      "peak_reserved_vram_mb": 572.0
+    }
+  ],
+  "precision_comparison": {
+    "fp32_duration_sec": 0.6571,
+    "fp16_duration_sec": 0.8425,
+    "fp16_speedup": 0.78,
+    "fp32_allocated_mb": 259.98,
+    "fp16_allocated_mb": 223.07,
+    "mean_cosine_similarity": 1.0,
+    "min_cosine_similarity": 1.0,
+    "max_absolute_error": 0.000174,
+    "top10_rank_agreement": 1.0
+  },
+  "query_latency_profile": {
+    "num_queries_measured": 100,
+    "average_latency_ms": 19.89,
+    "median_latency_ms": 19.72,
+    "p95_latency_ms": 26.08,
+    "p99_latency_ms": 31.01,
+    "min_latency_ms": 14.52,
+    "max_latency_ms": 33.32
+  },
+  "cpu_vs_gpu_speedup": {
+    "benchmark_chunk_count": 256,
+    "cpu_duration_sec": 2.3512,
+    "gpu_duration_sec": 0.3998,
+    "cpu_throughput": 108.9,
+    "gpu_throughput": 640.4,
+    "speedup_factor": 5.88
+  }
+}

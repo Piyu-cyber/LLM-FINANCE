@@ -41,3 +41,8 @@ explicit = true
 torch = { index = "pytorch-cu126" }
 torchvision = { index = "pytorch-cu126" }
 torchaudio = { index = "pytorch-cu126" }
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src", "src/retrieval", "src/verification", "src/eval", "src/generation"]
+testpaths = ["src", "tests"]
+

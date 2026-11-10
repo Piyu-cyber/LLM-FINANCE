@@ -1,0 +1,78 @@
+{
+  "phase": "3.4",
+  "project": "LLM-FINANCE: Verifiable and Attack-Resistant Financial RAG for SEC 10-K Documents using FinQA",
+  "title": "Repair and Abstention Engine Configuration",
+  "date": "2026-11-04",
+  "repair_policy": {
+    "max_repair_budget": 1,
+    "allow_independent_retrieval": false,
+    "allow_new_evidence_chunks": false,
+    "require_immutable_evidence_registry": true,
+    "require_complete_reverification": true,
+    "prohibit_self_certification": true,
+    "prohibit_repair_on_explicit_abstention": true,
+    "prohibit_repair_on_grounding_failure": true
+  },
+  "repairability_classification": {
+    "repairable_categories": [
+      "SYNTAX",
+      "SCHEMA",
+      "REFERENTIAL",
+      "ARITHMETIC",
+      "DIRECTION",
+      "METADATA"
+    ],
+    "repairable_statuses": [
+      "JSON_DECODE_ERROR",
+      "SCHEMA_VALIDATION_ERROR",
+      "REFERENTIAL_INTEGRITY_ERROR",
+      "ARITHMETIC_ERROR",
+      "DIRECTIONAL_CONTRADICTION",
+      "UNIT_VALIDATION_ERROR",
+      "PERIOD_VALIDATION_ERROR"
+    ],
+    "non_repairable_categories": [
+      "NON_REPAIRABLE_GROUNDING",
+      "NON_REPAIRABLE_ABSTENTION",
+      "NON_REPAIRABLE_RETRIEVAL",
+      "NON_REPAIRABLE_INFRASTRUCTURE",
+      "NON_REPAIRABLE_EXCEPTION"
+    ],
+    "non_repairable_statuses": [
+      "INSUFFICIENT_EVIDENCE",
+      "MODEL_DECLARED_ABSTENTION",
+      "EVIDENCE_GROUNDING_ERROR",
+      "EMPTY_RETRIEVAL_RESULTS",
+      "CONTEXT_BUILD_FAILURE",
+      "GENERATION_TIMEOUT",
+      "MODEL_INFERENCE_FAILURE",
+      "VERIFICATION_EXCEPTION"
+    ]
+  },
+  "terminal_statuses": [
+    "VERIFIED",
+    "INSUFFICIENT_EVIDENCE",
+    "GENERATION_ERROR",
+    "PARSING_ERROR",
+    "VERIFICATION_FAILED",
+    "REPAIR_FAILED",
+    "REPAIR_NOT_ATTEMPTED"
+  ],
+  "verification_stages": [
+    "1. Schema Validation (CLAIM_SCHEMA)",
+    "2. Operand Grounding (Chunks, Spans, Normalized Values, Periods, Units)",
+    "3. Arithmetic Program Execution (Decimal Calculation DAG)",
+    "4. Narrative Direction Check (Accounting Polarity & Economic Change)",
+    "5. Result Certification"
+  ],
+  "environment": {
+    "os": "Windows 11",
+    "python_version": "3.13.7",
+    "pytest_version": "9.0.3",
+    "hardware": {
+      "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "cuda_capability": "8.9",
+      "vram_gb": 8.0
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "phase": "2.5",
+  "dataset_split": "dev",
+  "dataset_size": 883,
+  "evaluated_query_count": 883,
+  "corpus_size": 25007,
+  "parameters": {
+    "top_k": 100,
+    "candidate_pool_size": 50,
+    "rerank_top_k": 10,
+    "rrf_k": 60,
+    "random_seed": 42,
+    "bootstrap_repetitions": 2000
+  },
+  "models": {
+    "dense": "BAAI/bge-small-en-v1.5",
+    "cross_encoder": "BAAI/bge-reranker-base",
+    "tokenizer": "bert-base-uncased"
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu_model": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "total_vram_mb": 8187.5,
+    "peak_vram_alloc_ce_mb": 1319.99,
+    "peak_vram_res_ce_mb": 1388.0
+  }
+}

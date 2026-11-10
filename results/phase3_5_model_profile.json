@@ -1,0 +1,52 @@
+{
+  "model_name": "Qwen/Qwen2.5-3B-Instruct",
+  "model_revision": "aa8e72537993ba99e69dfaafa59ed015b17504d1",
+  "target_device": "cuda:0",
+  "torch_dtype": "torch.bfloat16",
+  "load_latency_seconds": 15.187,
+  "checkpoints": {
+    "cp1_baseline": {
+      "allocated_mb": 0.0,
+      "reserved_mb": 0.0,
+      "free_mb": 7096.0,
+      "total_mb": 8187.5
+    },
+    "cp2_post_load": {
+      "allocated_mb": 5885.96,
+      "reserved_mb": 5942.0,
+      "free_mb": 700.1,
+      "total_mb": 8187.5
+    },
+    "cp3_post_warmup": {
+      "allocated_mb": 5894.09,
+      "reserved_mb": 5948.0,
+      "free_mb": 667.04,
+      "total_mb": 8187.5,
+      "prompt_tokens": 16,
+      "completion_tokens": 57,
+      "latency_ms": 6519.18
+    },
+    "cp4_steady_state": {
+      "allocated_mb": 5894.09,
+      "reserved_mb": 5962.0,
+      "free_mb": 646.66,
+      "total_mb": 8187.5,
+      "prompt_tokens": 257,
+      "completion_tokens": 128,
+      "latency_ms": 13153.35,
+      "throughput_tokens_per_sec": 9.73
+    },
+    "cp5_post_unload": {
+      "allocated_mb": 8.12,
+      "reserved_mb": 5868.0,
+      "free_mb": 740.66,
+      "total_mb": 8187.5,
+      "memory_reclaimed_mb": 5885.97
+    }
+  },
+  "vram_summary": {
+    "model_weights_allocated_mb": 5885.96,
+    "peak_reserved_mb": 5962.0,
+    "safety_margin_free_mb": 646.66
+  }
+}

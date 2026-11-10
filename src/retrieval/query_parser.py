@@ -58,7 +58,7 @@ _DEFAULT_TICKERS: dict[str, list[str]] = {
     "MS": ["morgan stanley", "ms"],
     "AXP": ["american express", "amex", "axp"],
     "V": ["visa"],
-    "MA": ["mastercard", "ma"],
+    "MA": ["mastercard"],
     "XOM": ["exxon", "exxonmobil", "xom"],
     "CVX": ["chevron", "cvx"],
     "COP": ["conocophillips", "cop"],
@@ -70,8 +70,8 @@ _DEFAULT_TICKERS: dict[str, list[str]] = {
     "GE": ["general electric", "ge"],
     "MMM": ["3m", "minnesota mining", "mmm"],
     "HON": ["honeywell", "hon"],
-    "CAT": ["caterpillar", "cat"],
-    "DE": ["deere", "john deere", "de"],
+    "CAT": ["caterpillar"],
+    "DE": ["john deere", "deere"],
     "AAPL": ["apple", "aapl"],
     "MSFT": ["microsoft", "msft"],
     "GOOGL": ["google", "alphabet", "googl"],
@@ -83,18 +83,18 @@ _DEFAULT_TICKERS: dict[str, list[str]] = {
     "IBM": ["ibm", "international business machines"],
     "ORCL": ["oracle", "orcl"],
     "CRM": ["salesforce", "crm"],
-    "NOW": ["servicenow", "now"],
+    "NOW": ["servicenow"],
     "ADBE": ["adobe", "adbe"],
     "CSCO": ["cisco", "csco"],
     "QCOM": ["qualcomm", "qcom"],
     "TXN": ["texas instruments", "txn"],
     "AMAT": ["applied materials", "amat"],
-    "MU": ["micron", "mu"],
+    "MU": ["micron"],
     "WMT": ["walmart", "wmt"],
-    "COST": ["costco", "cost"],
+    "COST": ["costco"],
     "TGT": ["target", "tgt"],
-    "HD": ["home depot", "hd"],
-    "LOW": ["lowe's", "lowes", "low"],
+    "HD": ["home depot"],
+    "LOW": ["lowe's", "lowes"],
     "AMGN": ["amgen", "amgn"],
     "GILD": ["gilead", "gild"],
     "BIIB": ["biogen", "biib"],
@@ -182,6 +182,13 @@ def build_ticker_dict(corpus_path: Optional[Path] = None) -> dict[str, list[str]
     return tickers
 
 
+AMBIGUOUS_COMMON_WORDS = {
+    "now", "low", "cat", "de", "cost", "all", "are", "for", "so", "at", "by", "be",
+    "an", "am", "if", "do", "go", "no", "up", "us", "or", "on", "it", "to", "in",
+    "hd", "mu", "c", "v", "ma", "target", "a", "can", "see", "met", "key", "fast", "pay", "well"
+}
+
+
 def extract_companies(
     question: str,
     ticker_dict: Optional[dict[str, list[str]]] = None
@@ -218,15 +225,25 @@ def extract_companies(
     matched: set[str] = set()
 
     for ticker, variants in ticker_dict.items():
+        # Check explicit uppercase ticker or $TICKER in original question (e.g. \bLOW\b, \$LOW)
+        explicit_ticker_pattern = rf"(?:\$|\b){re.escape(ticker)}\b"
+        if re.search(explicit_ticker_pattern, question):
+            matched.add(ticker)
+            continue
+
         for variant in variants:
-            # Use word-boundary matching for short tickers to avoid false hits
-            if len(variant) <= 4:
-                pattern = r"\b" + re.escape(variant) + r"\b"
+            v_lower = variant.lower().strip()
+            # Common English words cannot trigger ticker matches in lowercase prose
+            if v_lower in AMBIGUOUS_COMMON_WORDS:
+                continue
+
+            if len(v_lower) <= 4:
+                pattern = r"\b" + re.escape(v_lower) + r"\b"
                 if re.search(pattern, question_lower):
                     matched.add(ticker)
                     break
             else:
-                if variant in question_lower:
+                if v_lower in question_lower:
                     matched.add(ticker)
                     break
 

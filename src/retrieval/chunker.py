@@ -204,22 +204,38 @@ def create_chunks(example: dict[str, Any]) -> list[dict]:
     return text_chunks + table_chunks
 
 
+def chunk_dataset(input_path, output_path):
+    """Process a FinQA dataset file and write all generated chunks to JSONL."""
+    import json
+    from pathlib import Path
+
+    in_p = Path(input_path)
+    out_p = Path(output_path)
+
+    with open(in_p, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    all_chunks = []
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_p, "w", encoding="utf-8") as out_f:
+        for ex in data:
+            chunks = create_chunks(ex)
+            for c in chunks:
+                all_chunks.append(c)
+                out_f.write(json.dumps(c) + "\n")
+
+    print(f"Processed {len(data)} examples from {in_p}")
+    print(f"Generated {len(all_chunks)} chunks saved to {out_p}")
+    return all_chunks
+
+
 if __name__ == "__main__":
-    from finqa_loader import load_finqa
+    import argparse
+    from pathlib import Path
 
-    data = load_finqa()
+    parser = argparse.ArgumentParser(description="Convert FinQA dataset into retrievable chunks.")
+    parser.add_argument("--input", type=Path, default=Path("data/finqa/dataset/dev.json"), help="Input FinQA JSON dataset path")
+    parser.add_argument("--output", type=Path, default=Path("data/finqa/dev_chunks.jsonl"), help="Output JSONL chunks path")
+    args = parser.parse_args()
 
-    example = data[0]
-
-    chunks = create_chunks(example)
-
-    print(f"Number of chunks: {len(chunks)}")
-
-    for chunk in chunks:
-        print("\n---")
-        print(f"ID      : {chunk['chunk_id']}")
-        print(f"Source  : {chunk['source']}")
-        print(f"Company : {chunk.get('company', '')}")
-        print(f"Year    : {chunk.get('year', '')}")
-        print(f"Units   : {chunk.get('units', '')}")
-        print(f"Text    : {chunk['text'][:200]}")
+    chunk_dataset(args.input, args.output)

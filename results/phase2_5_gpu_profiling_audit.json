@@ -1,0 +1,101 @@
+[
+  {
+    "mode": "CPU",
+    "batch_size": 64,
+    "num_chunks": 1024,
+    "model_load_time_sec": 0.477,
+    "warmup_time_sec": 1.589,
+    "benchmark_time_sec": 10.2517,
+    "throughput_chunks_per_sec": 99.89,
+    "avg_batch_latency_ms": 640.73,
+    "peak_allocated_vram_mb": 0.0,
+    "peak_reserved_vram_mb": 0.0,
+    "nvidia_smi_before": null,
+    "nvidia_smi_after": null,
+    "embedding_shape": [
+      1024,
+      384
+    ]
+  },
+  {
+    "mode": "GPU_FP32",
+    "batch_size": 64,
+    "num_chunks": 1024,
+    "model_load_time_sec": 0.538,
+    "warmup_time_sec": 0.336,
+    "benchmark_time_sec": 0.7062,
+    "throughput_chunks_per_sec": 1450.09,
+    "avg_batch_latency_ms": 44.14,
+    "peak_allocated_vram_mb": 259.98,
+    "peak_reserved_vram_mb": 356.0,
+    "nvidia_smi_before": {
+      "total_mb": 8188.0,
+      "used_mb": 1954.0,
+      "free_mb": 6003.0
+    },
+    "nvidia_smi_after": {
+      "total_mb": 8188.0,
+      "used_mb": 2148.0,
+      "free_mb": 5809.0
+    },
+    "embedding_shape": [
+      1024,
+      384
+    ],
+    "speedup_over_cpu": 14.52
+  },
+  {
+    "mode": "GPU_FP16",
+    "batch_size": 64,
+    "num_chunks": 1024,
+    "model_load_time_sec": 0.359,
+    "warmup_time_sec": 0.188,
+    "benchmark_time_sec": 0.3823,
+    "throughput_chunks_per_sec": 2678.7,
+    "avg_batch_latency_ms": 23.89,
+    "peak_allocated_vram_mb": 265.98,
+    "peak_reserved_vram_mb": 318.0,
+    "nvidia_smi_before": {
+      "total_mb": 8188.0,
+      "used_mb": 2068.0,
+      "free_mb": 5889.0
+    },
+    "nvidia_smi_after": {
+      "total_mb": 8188.0,
+      "used_mb": 2114.0,
+      "free_mb": 5843.0
+    },
+    "embedding_shape": [
+      1024,
+      384
+    ],
+    "speedup_over_cpu": 26.82
+  },
+  {
+    "mode": "GPU_BF16",
+    "batch_size": 64,
+    "num_chunks": 1024,
+    "model_load_time_sec": 0.334,
+    "warmup_time_sec": 0.28,
+    "benchmark_time_sec": 0.4249,
+    "throughput_chunks_per_sec": 2409.83,
+    "avg_batch_latency_ms": 26.56,
+    "peak_allocated_vram_mb": 331.04,
+    "peak_reserved_vram_mb": 378.0,
+    "nvidia_smi_before": {
+      "total_mb": 8188.0,
+      "used_mb": 2132.0,
+      "free_mb": 5825.0
+    },
+    "nvidia_smi_after": {
+      "total_mb": 8188.0,
+      "used_mb": 2172.0,
+      "free_mb": 5785.0
+    },
+    "embedding_shape": [
+      1024,
+      384
+    ],
+    "speedup_over_cpu": 24.13
+  }
+]

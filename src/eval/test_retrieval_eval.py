@@ -23,13 +23,19 @@ sys.path.insert(0, os.path.dirname(__file__))
 # Instead, retrieval_eval.py is imported after inserting a minimal stub.
 for _mod in ("rank_bm25", "sentence_transformers", "torch"):
     if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
+        try:
+            __import__(_mod)
+        except ImportError:
+            sys.modules[_mod] = MagicMock()
 
 # numpy stub: only stub if truly absent; provide a real bool_ to keep pytest happy
 if "numpy" not in sys.modules:
-    _np_stub = MagicMock()
-    _np_stub.bool_ = bool   # make isinstance(x, np.bool_) work
-    sys.modules["numpy"] = _np_stub
+    try:
+        import numpy
+    except ImportError:
+        _np_stub = MagicMock()
+        _np_stub.bool_ = bool   # make isinstance(x, np.bool_) work
+        sys.modules["numpy"] = _np_stub
 
 import pytest
 
@@ -315,3 +321,136 @@ class TestMetricsToDict:
         assert math.isclose(d["page_recall_at_5"], 1.0)
         assert "span_mrr" in d
         assert "page_mrr" in d
+
+
+# ============================================================
+# Phase 1: Robust Metric Definitions & Multi-Span Verification
+# ============================================================
+
+from retrieval_eval import (
+    span_matches,
+    normalize_evidence_text,
+    compute_example_metrics,
+)
+
+
+class TestSpanMatchesRobustness:
+    """Verifies that span matching rejects unsafe substrings and handles normalization."""
+
+    def test_exact_and_contained_gold(self):
+        gold = "interest expense increased to $600 million in 2009"
+        chunk = "operating results: interest expense increased to $600 million in 2009 compared to $511 million in 2008."
+        assert span_matches(chunk, gold)
+
+    def test_unsafe_short_retrieved_substring_rejected(self):
+        # A tiny retrieved chunk of 1-3 tokens that happens to appear in a long gold sentence
+        # should NOT count as finding the gold evidence (prevents metric inflation).
+        gold = "net income was $1,500 million for the year ended december 31, 2019."
+        short_chunk_1 = "net income"
+        short_chunk_2 = "million"
+        short_chunk_3 = "the year ended"
+        assert not span_matches(short_chunk_1, gold)
+        assert not span_matches(short_chunk_2, gold)
+        assert not span_matches(short_chunk_3, gold)
+
+    def test_substantial_retrieved_substring_accepted(self):
+        # A retrieved chunk with >= 4 tokens that is a substantial excerpt of gold is accepted
+        gold = "net income attributable to common shareholders was $1,500 million for 2019"
+        chunk = "net income attributable to common"
+        assert span_matches(chunk, gold)
+
+    def test_normalization_whitespace_and_case(self):
+        gold = "Total   Revenue\n\t$12,500"
+        chunk = "Item 8. total revenue $12,500 from continuing operations."
+        assert span_matches(chunk, gold)
+
+    def test_empty_or_none_inputs(self):
+        assert not span_matches("", "some gold text")
+        assert not span_matches("some chunk text", "")
+        assert not span_matches(None, "some gold text")
+        assert not span_matches("some chunk text", None)
+
+
+class TestComputeExampleMetricsMultiSpan:
+    """Tests distinguishing Hit@K from true multi-span Recall@K and independent page metrics."""
+
+    def test_multi_span_recall_vs_hit_distinction(self):
+        gold_spans = [
+            "operating income of $500 million in 2020",
+            "net income decreased by 10 percent",
+        ]
+        doc_id = "AAPL/2020/page_12"
+
+        # Chunk 1 matches span 0
+        chunk_1 = {
+            "example_id": doc_id,
+            "text": "we achieved operating income of $500 million in 2020 through efficiency.",
+        }
+        # Chunk 2 matches nothing
+        chunk_2 = {
+            "example_id": "MSFT/2020/page_1",
+            "text": "unrelated software license revenue increased.",
+        }
+        # Chunk 3 matches span 1
+        chunk_3 = {
+            "example_id": doc_id,
+            "text": "overall net income decreased by 10 percent due to higher costs.",
+        }
+
+        retrieved = [chunk_1, chunk_2, chunk_3]
+        metrics = compute_example_metrics(retrieved, gold_spans, doc_id, top_ks=(1, 2, 3))
+
+        # At K=1: 1 out of 2 gold spans found
+        assert metrics["span_hit_at_1"] == 1.0
+        assert math.isclose(metrics["span_recall_at_1"], 0.5)
+
+        # At K=2: still only 1 out of 2 gold spans found (chunk 2 was irrelevant)
+        assert metrics["span_hit_at_2"] == 1.0
+        assert math.isclose(metrics["span_recall_at_2"], 0.5)
+
+        # At K=3: both gold spans found
+        assert metrics["span_hit_at_3"] == 1.0
+        assert math.isclose(metrics["span_recall_at_3"], 1.0)
+
+    def test_independent_page_and_span_relevance(self):
+        gold_spans = ["long-term debt totaled $4,000 million"]
+        gold_doc = "CAT/2018/page_55"
+
+        # Case A: chunk from gold page, but irrelevant text
+        chunk_page_only = {
+            "example_id": gold_doc,
+            "text": "forward looking statements disclaimer and risk factors.",
+        }
+        res_a = compute_example_metrics([chunk_page_only], gold_spans, gold_doc, top_ks=(1,))
+        assert res_a["page_hit_at_1"] == 1.0
+        assert res_a["span_hit_at_1"] == 0.0
+        assert res_a["span_recall_at_1"] == 0.0
+
+        # Case B: chunk has gold text, but from different doc/page (e.g. historical quote in another file)
+        chunk_span_only = {
+            "example_id": "DE/2018/page_10",
+            "text": "long-term debt totaled $4,000 million across credit facilities.",
+        }
+        res_b = compute_example_metrics([chunk_span_only], gold_spans, gold_doc, top_ks=(1,))
+        assert res_b["page_hit_at_1"] == 0.0
+        assert res_b["span_hit_at_1"] == 1.0
+        assert res_b["span_recall_at_1"] == 1.0
+
+    def test_duplicate_matching_chunks_do_not_overcount_recall(self):
+        gold_spans = ["revenue was $100 million", "expenses were $80 million"]
+        doc_id = "DOC/1"
+
+        # Two chunks both match span 0
+        chunk_1 = {"example_id": doc_id, "text": "revenue was $100 million in 2021"}
+        chunk_2 = {"example_id": doc_id, "text": "table row: revenue was $100 million"}
+
+        res = compute_example_metrics([chunk_1, chunk_2], gold_spans, doc_id, top_ks=(2,))
+        # Only 1 distinct gold span was covered
+        assert math.isclose(res["span_recall_at_2"], 0.5)
+
+    def test_empty_gold_spans_handled_safely(self):
+        chunk = {"example_id": "DOC/1", "text": "some text"}
+        res = compute_example_metrics([chunk], [], "DOC/1", top_ks=(1, 5))
+        assert res["span_recall_at_1"] == 0.0
+        assert res["span_hit_at_1"] == 0.0
+        assert res["page_hit_at_1"] == 1.0

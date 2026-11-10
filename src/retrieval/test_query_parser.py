@@ -256,3 +256,38 @@ class TestBuildTickerDict:
     def test_missing_file_returns_defaults(self):
         d = build_ticker_dict(corpus_path="/nonexistent/path.jsonl")
         assert "UNP" in d
+
+
+# ============================================================
+# Ambiguous Tickers & Common Words (Phase 1)
+# ============================================================
+
+class TestAmbiguousTickers:
+    def test_common_words_do_not_trigger_tickers(self):
+        # "now" must not match NOW (ServiceNow)
+        res = extract_companies("What is the change in interest expense from 2008 to 2009 now?")
+        assert "NOW" not in res
+
+        # "low" must not match LOW (Lowe's)
+        res = extract_companies("What was the all-time low in gross profit?")
+        assert "LOW" not in res
+
+        # "cat" must not match CAT (Caterpillar)
+        res = extract_companies("Compare cat and dog performance")
+        assert "CAT" not in res
+
+        # "de" must not match DE (Deere)
+        res = extract_companies("Risk de-escalation report")
+        assert "DE" not in res
+
+    def test_explicit_names_and_uppercase_tickers_match(self):
+        # Unambiguous company name variants
+        assert "NOW" in extract_companies("What was ServiceNow's 2009 revenue?")
+        assert "CAT" in extract_companies("What was Caterpillar's 2009 operating profit?")
+        assert "DE" in extract_companies("What were Deere's net sales in 2008?")
+        assert "LOW" in extract_companies("What were Lowe's revenues in 2009?")
+
+        # Explicit uppercase tickers in raw query
+        assert "LOW" in extract_companies("What were $LOW revenues in 2009?")
+        assert "NOW" in extract_companies("What was NOW revenue in 2009?")
+        assert "CAT" in extract_companies("What was CAT revenue in 2009?")

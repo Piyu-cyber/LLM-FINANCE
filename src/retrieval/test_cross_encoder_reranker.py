@@ -15,21 +15,27 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Fast unit test stubs so tests don't load heavyweight torch/CUDA binaries on CPU
 if "torch" not in sys.modules:
-    torch_mock = MagicMock()
-    torch_mock.cuda.is_available.return_value = False
-    sys.modules["torch"] = torch_mock
+    try:
+        import torch
+    except ImportError:
+        torch_mock = MagicMock()
+        torch_mock.cuda.is_available.return_value = False
+        sys.modules["torch"] = torch_mock
 
 if "sentence_transformers" not in sys.modules:
-    st_mock = MagicMock()
-    sys.modules["sentence_transformers"] = st_mock
+    try:
+        import sentence_transformers
+    except ImportError:
+        st_mock = MagicMock()
+        sys.modules["sentence_transformers"] = st_mock
 
 from cross_encoder_reranker import CrossEncoderReranker
 
 
 def test_cross_encoder_rerank_logic():
-    reranker = CrossEncoderReranker(model_name="dummy-model")
-    # Mock predict method on the reranker's underlying model
-    reranker.model.predict.return_value = [0.2, 0.9, 0.5]
+    mock_model = MagicMock()
+    mock_model.predict.return_value = [0.2, 0.9, 0.5]
+    reranker = CrossEncoderReranker(model_name="dummy-model", model=mock_model)
 
     candidates = [
         {"chunk_id": "c1", "text": "candidate 1"},
@@ -51,14 +57,16 @@ def test_cross_encoder_rerank_logic():
 
 
 def test_cross_encoder_empty_candidates():
-    reranker = CrossEncoderReranker(model_name="dummy-model")
+    mock_model = MagicMock()
+    reranker = CrossEncoderReranker(model_name="dummy-model", model=mock_model)
     results = reranker.rerank("Query", [], top_k=5)
     assert results == []
 
 
 def test_cross_encoder_preserves_original_chunk_metadata():
-    reranker = CrossEncoderReranker(model_name="dummy-model")
-    reranker.model.predict.return_value = [0.85]
+    mock_model = MagicMock()
+    mock_model.predict.return_value = [0.85]
+    reranker = CrossEncoderReranker(model_name="dummy-model", model=mock_model)
 
     candidate = {
         "example_id": "UNP/2009/page_34.pdf-1",
@@ -74,3 +82,24 @@ def test_cross_encoder_preserves_original_chunk_metadata():
     assert results[0]["chunk_id"] == "table_1"
     assert results[0]["source"] == "table"
     assert math.isclose(results[0]["rerank_score"], 0.85)
+
+
+def test_cross_encoder_singleton_and_injection():
+    from unittest.mock import patch
+    from cross_encoder_reranker import get_cross_encoder, reset_cross_encoder_cache
+
+    reset_cross_encoder_cache()
+    mock_model = MagicMock()
+    # Test dependency injection
+    injected_reranker = CrossEncoderReranker(model_name="mock-model", model=mock_model)
+    assert injected_reranker.model is mock_model
+
+    # Test singleton caching with mocked CrossEncoder to prevent offline download
+    with patch("cross_encoder_reranker.CrossEncoder"):
+        r1 = get_cross_encoder(model_name="dummy-singleton")
+        r2 = get_cross_encoder(model_name="dummy-singleton")
+        assert r1 is r2  # Exact same instance reused, model not re-loaded
+
+        reset_cross_encoder_cache()
+        r3 = get_cross_encoder(model_name="dummy-singleton")
+        assert r3 is not r1  # Cache reset creates fresh instance

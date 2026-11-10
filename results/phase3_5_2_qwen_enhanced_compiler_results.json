@@ -1,0 +1,422 @@
+{
+  "experiment": "Enhanced Qwen2.5-3B + 2-Shot + Symbolic Compiler",
+  "sample_size": 20,
+  "metrics": {
+    "Groundedness": {
+      "mean": 0.85,
+      "ci95": 0.16055889229418857,
+      "formatted": "0.8500 \u00b1 0.1606"
+    },
+    "JSON_Valid": {
+      "mean": 0.95,
+      "ci95": 0.098,
+      "formatted": "0.9500 \u00b1 0.0980"
+    },
+    "Numerical": {
+      "mean": 0.55,
+      "ci95": 0.22370045761428853,
+      "formatted": "0.5500 \u00b1 0.2237"
+    },
+    "S_Comp": {
+      "mean": 0.7833333333333333,
+      "ci95": 0.12784228221839214,
+      "formatted": "0.7833 \u00b1 0.1278"
+    },
+    "Latency_ms": {
+      "mean": 16785.953290000063,
+      "ci95": 2311.9435165352766,
+      "formatted": "16786.0 \u00b1 2311.9"
+    }
+  },
+  "records": [
+    {
+      "step": 1,
+      "dev_index": 0,
+      "question": "what is the average payment volume per transaction for american express?",
+      "gold_answer": 127.4,
+      "gold_program": "divide(637, const_5)",
+      "operands": [
+        "637",
+        "5.0"
+      ],
+      "program": "637 / 5.0",
+      "symbolic_executed_value": 127.4,
+      "raw_output": "{\n  \"thought\": \"Average payment volume = Total payment volume ($637B) / Total transactions (5.0B) = 637 / 5.0 = 127.4\",\n  \"operands\": [\"637\", \"5.0\"],\n  \"program\": \"637 / 5.0\",\n  \"answer\": \"127.4\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 13129.122400000142
+    },
+    {
+      "step": 2,
+      "dev_index": 64,
+      "question": "what is the growth rate of the net earnings attributable to pmi?",
+      "gold_answer": -0.13377,
+      "gold_program": "subtract(6035, 6967), divide(#0, 6967)",
+      "operands": [
+        "6967",
+        "6948"
+      ],
+      "program": "(6967 - 6948) / 6948 * 100",
+      "symbolic_executed_value": 0.2734599884858952,
+      "raw_output": "{\n  \"thought\": \"To find the growth rate of net earnings attributable to Pmi, we need to calculate the percentage increase from 2016 to 2017. The formula is ((2017 value - 2016 value) / 2016 value) * 100.\",\n  \"operands\": [\"6967\", \"6948\"],\n  \"program\": \"(6967 - 6948) / 6948 * 100\",\n  \"answer\": \"0.245%\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.6666666666666666,
+      "latency_ms": 14823.023100000228
+    },
+    {
+      "step": 3,
+      "dev_index": 133,
+      "question": "what was the average weighted average common shares outstanding for diluted computations from 2015 to 2017",
+      "gold_answer": 302.8,
+      "gold_program": "add(290.6, 303.1), add(#0, 314.7), divide(#1, const_3)",
+      "operands": [
+        "314.7",
+        "303.1",
+        "290.6"
+      ],
+      "program": "(314.7 + 303.1 + 290.6) / 3",
+      "symbolic_executed_value": 302.8,
+      "raw_output": "{\n  \"thought\": \"To find the average, sum the values for 2015, 2016, and 2017 then divide by 3. The values are 314.7 for 2015, 303.1 for 2016, and 290.6 for 2017.\",\n  \"operands\": [\"314.7\", \"303.1\", \"290.6\"],\n  \"program\": \"(314.7 + 303.1 + 290.6) / 3\",\n  \"answer\": \"300.2\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 15664.686300000085
+    },
+    {
+      "step": 4,
+      "dev_index": 203,
+      "question": "what is the percentage increase in total accumulated other comprehensive losses from 2014 to 2015?",
+      "gold_answer": 0.37738,
+      "gold_program": "subtract(9402, 6826), divide(#0, 6826)",
+      "operands": [
+        "-9402",
+        "-6826"
+      ],
+      "program": "( -9402 - (-6826) ) / abs(-6826) * 100",
+      "symbolic_executed_value": 1.377380603574568,
+      "raw_output": "{\n  \"thought\": \"To find the percentage increase, we need to calculate the difference between the total accumulated other comprehensive losses in 2015 and 2014, then divide by the value in 2014 and multiply by 100.\",\n  \"operands\": [\"-9402\", \"-6826\"],\n  \"program\": \"( -9402 - (-6826) ) / abs(-6826) * 100\",\n  \"answer\": \"-38.5%\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.6666666666666666,
+      "latency_ms": 15083.97799999966
+    },
+    {
+      "step": 5,
+      "dev_index": 292,
+      "question": "what percentage of total goodwill is attributable to retail bank reporting unit as december 31 , 2011?",
+      "gold_answer": 0.02099,
+      "gold_program": "divide(40.6, 1934.2)",
+      "operands": [
+        "40.6",
+        "1934.2"
+      ],
+      "program": "(40.6 / 1934.2) * 100",
+      "symbolic_executed_value": 2.0990590424981903,
+      "raw_output": "{\n  \"thought\": \"To find the percentage of total goodwill attributable to the retail bank reporting unit, divide the retail bank's goodwill by the total goodwill and multiply by 100.\",\n  \"operands\": [\"40.6\", \"1934.2\"],\n  \"program\": \"(40.6 / 1934.2) * 100\",\n  \"answer\": \"2.1\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 12845.485299999837
+    },
+    {
+      "step": 6,
+      "dev_index": 354,
+      "question": "what was the value of the treasury stock as of december 312007",
+      "gold_answer": 643822.41,
+      "gold_program": "multiply(14669, 43.89)",
+      "operands": [
+        "14669",
+        "$43.89"
+      ],
+      "program": "14669 * 43.89",
+      "symbolic_executed_value": 643822.41,
+      "raw_output": "{\n  \"thought\": \"The value of treasury stock can be calculated by multiplying the number of shares repurchased by the average price per share. From the table, the number of shares repurchased between December 1 and December 31, 2007 is 14,669 and the average price per share is $43.89.\",\n  \"operands\": [\"14669\", \"$43.89\"],\n  \"program\": \"14669 * 43.89\",\n  \"answer\": \"644485.41\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 17881.95369999994
+    },
+    {
+      "step": 7,
+      "dev_index": 418,
+      "question": "what portion of the purchasing price is dedicated to goodwill?",
+      "gold_answer": 0.1853,
+      "gold_program": "divide(5800, 31300)",
+      "operands": [
+        "31300",
+        "24800",
+        "600"
+      ],
+      "program": "(31300 - 24800 - 600) / 31300",
+      "symbolic_executed_value": 0.18849840255591055,
+      "raw_output": "{\n  \"thought\": \"Goodwill is calculated as the final purchase price minus the sum of net tangible assets acquired and in-process research and development. The portion of the purchase price dedicated to goodwill is therefore (final purchase price - net tangible assets acquired - in-process research and development) / final purchase price. We can extract these values from the table.\",\n  \"operands\": [\"31300\", \"24800\", \"600\"],\n  \"program\": \"(31300 - 24800 - 600) / 31300\",\n  \"answer\": \"0.21\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 14185.532599999988
+    },
+    {
+      "step": 8,
+      "dev_index": 484,
+      "question": "what was the difference in dollars of the high low sale price for the common stock in the third quarter of 2002?",
+      "gold_answer": 3.05,
+      "gold_program": "subtract(4.61, 1.56)",
+      "operands": [
+        "4.61",
+        "1.56"
+      ],
+      "program": "4.61 - 1.56",
+      "symbolic_executed_value": 3.0500000000000003,
+      "raw_output": "{\n  \"thought\": \"To find the difference in the high and low sale prices for the third quarter of 2002, I need to subtract the low price from the high price. The high price for the third quarter of 2002 was $4.61 and the low price was $1.56.\",\n  \"operands\": [\"4.61\", \"1.56\"],\n  \"program\": \"4.61 - 1.56\",\n  \"answer\": \"3.05\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 11679.740200000197
+    },
+    {
+      "step": 9,
+      "dev_index": 13,
+      "question": "in 2011 what was the amount of tax related to the unrealized losses reclassifications totaled $ 303 million , or $ 189 million after-tax,",
+      "gold_answer": 114.0,
+      "gold_program": "subtract(303, 189)",
+      "operands": [
+        "303",
+        "189"
+      ],
+      "program": "189 / 303 * 303",
+      "symbolic_executed_value": 189.0,
+      "raw_output": "{\n  \"thought\": \"To find the tax related to the unrealized losses reclassifications, we need to calculate the after-tax amount for 2011, which is given as $189 million. The total reclassification amount for 2011 is $303 million. The tax-related amount can be found by calculating the proportion of the after-tax amount to the total reclassification amount.\",\n  \"operands\": [\"303\", \"189\"],\n  \"program\": \"189 / 303 * 303\",\n  \"answer\": \"189\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.6666666666666666,
+      "latency_ms": 13415.751600000021
+    },
+    {
+      "step": 10,
+      "dev_index": 114,
+      "question": "what percentage of amounts expensed in 2009 came from discretionary company contributions?",
+      "gold_answer": 10.82621,
+      "gold_program": "divide(3.8, 35.1), multiply(#0, const_100)",
+      "operands": [
+        "3.8",
+        "35.1",
+        "3.8"
+      ],
+      "program": "(3.8 / (35.1 + 3.8)) * 100",
+      "symbolic_executed_value": 9.768637532133676,
+      "raw_output": "{\n  \"thought\": \"To find the percentage, divide the discretionary company contribution (3.8) by the total expense (35.1 + 3.8) and multiply by 100.\",\n  \"operands\": [\"3.8\", \"35.1\", \"3.8\"],\n  \"program\": \"(3.8 / (35.1 + 3.8)) * 100\",\n  \"answer\": \"9.41\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.6666666666666666,
+      "latency_ms": 17151.25530000023
+    },
+    {
+      "step": 11,
+      "dev_index": 250,
+      "question": "in 2009 what was the company 2019s consolidated net sales in billions",
+      "gold_answer": 22.1875,
+      "gold_program": "divide(7.1, 32%)",
+      "operands": [
+        "( 41 )%",
+        "( 41 )%",
+        "( 36 )%",
+        "( 36 )%",
+        "( 52 )%",
+        "( 52 )%"
+      ],
+      "program": "( 41 + 36 + 52 ) / 100 * 10000",
+      "symbolic_executed_value": 12900.0,
+      "raw_output": "{\n  \"thought\": \"To find the company's consolidated net sales in 2009, we need to sum up the segment net sales for 2009 from the table.\",\n  \"operands\": [\"( 41 )%\", \"( 41 )%\", \"( 36 )%\", \"( 36 )%\", \"( 52 )%\", \"( 52 )%\"],\n  \"program\": \"( 41 + 36 + 52 ) / 100 * 10000\",\n  \"answer\": \"7146\"\n}",
+      "G": 0.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.3333333333333333,
+      "latency_ms": 24097.701700000016
+    },
+    {
+      "step": 12,
+      "dev_index": 365,
+      "question": "for all of 2011 , approximately how much was spent on stock repurchases?",
+      "gold_answer": 1473945024.8,
+      "gold_program": "multiply(15340810, 96.08)",
+      "operands": [
+        "379488",
+        "87.46",
+        "1748964",
+        "98.41",
+        "1787343",
+        "100.26"
+      ],
+      "program": "(379488 * 87.46) + (1748964 * 98.41) + (1787343 * 100.26)",
+      "symbolic_executed_value": 384504576.9,
+      "raw_output": "{\n  \"thought\": \"To find the total amount spent on stock repurchases for 2011, sum the total number of shares purchased multiplied by their respective average prices for each month.\",\n  \"operands\": [\"379488\", \"87.46\", \"1748964\", \"98.41\", \"1787343\", \"100.26\"],\n  \"program\": \"(379488 * 87.46) + (1748964 * 98.41) + (1787343 * 100.26)\",\n  \"answer\": \"$1,143,527,200.80\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.6666666666666666,
+      "latency_ms": 22600.207200000114
+    },
+    {
+      "step": 13,
+      "dev_index": 491,
+      "question": "as of december 31 , 2015 , what was the maximum premium on the dp&l preferred stock?",
+      "gold_answer": 0.03,
+      "gold_program": "subtract(103, const_100), divide(#0, const_100)",
+      "operands": [
+        "101",
+        "103",
+        "3"
+      ],
+      "program": "(101 + 103) * 3",
+      "symbolic_executed_value": 612.0,
+      "raw_output": "{\n  \"thought\": \"The maximum premium on DP&L preferred stock can be calculated by adding the minimum redemption price to the annual dividend requirement. The minimum redemption price is given as $101 and $103 per share, and the annual dividend requirement is $3 million per share.\",\n  \"operands\": [\"101\", \"103\", \"3\"],\n  \"program\": \"(101 + 103) * 3\",\n  \"answer\": \"618\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.6666666666666666,
+      "latency_ms": 18209.739700000682
+    },
+    {
+      "step": 14,
+      "dev_index": 593,
+      "question": "what is percentage change in rd&e spendings from 2013 to 2014?",
+      "gold_answer": 0.08333,
+      "gold_program": "subtract(1.3, 1.2), divide(#0, 1.2)",
+      "operands": [
+        "1300",
+        "1100"
+      ],
+      "program": "(1300 - 1100) / 1100",
+      "symbolic_executed_value": 0.18181818181818182,
+      "raw_output": "{\n  \"thought\": \"To find the percentage change in R&D spending from 2013 to 2014, we need to calculate the difference between the spending amounts in those two years and then divide by the 2013 amount. The formula is ((2014 spending - 2013 spending) / 2013 spending).\",\n  \"operands\": [\"1300\", \"1100\"],\n  \"program\": \"(1300 - 1100) / 1100\",\n  \"answer\": \"0.1818\"\n}",
+      "G": 0.0,
+      "J": 1.0,
+      "N": 0.0,
+      "S_comp": 0.3333333333333333,
+      "latency_ms": 13822.957899999892
+    },
+    {
+      "step": 15,
+      "dev_index": 2,
+      "question": "what percentage of the total oil and gas mmboe comes from canada?",
+      "gold_answer": 24.69136,
+      "gold_program": "divide(60, 243), multiply(#0, const_100)",
+      "operands": [
+        "60",
+        "243"
+      ],
+      "program": "(24 / 243) * 100",
+      "symbolic_executed_value": 24.5,
+      "raw_output": "{\n  \"thought\": \"To find the percentage of total oil and gas mmboe coming from Canada, divide Canada's total by the overall total and multiply by 100.\",\n  \"operands\": [\"60\", \"243\"],\n  \"program\": \"(24 / 243) * 100\",\n  \"answer\": \"24.5%\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 8777.100000000246
+    },
+    {
+      "step": 16,
+      "dev_index": 123,
+      "question": "what percent higher is fair value than carrying value?",
+      "gold_answer": 0.07513,
+      "gold_program": "divide(5309, 4938), subtract(#0, const_1)",
+      "operands": [],
+      "program": "",
+      "symbolic_executed_value": null,
+      "raw_output": "par . the 2013 floating rate notes bore interest at a rate equal to the three-month london interbank offered rate plus a spread of 1.25 % . the 2013 floating rate notes were repaid in full in may 2013 at par . the 2021 notes were issued at a discount of $ 3 million that is being amortized over the term of the notes . the company incurred approximately $ 6 million of debt issuance costs , which are being amortized over the term of the 2021 notes . at december 31 , 2014 , $ 3 million of unamortized debt issuance costs was included in other assets on the consolidated statement of financial condition . 2017 notes . in february 2011 , the company issued $ 1.0 billion in aggregate principal amount of unsecured unsubordinated obligations . these notes were issued as two separate series of senior debt securities , including $ 700 million of 6.25%",
+      "G": 0.0,
+      "J": 0.0,
+      "N": 0.0,
+      "S_comp": 0.0,
+      "latency_ms": 31642.74690000002
+    },
+    {
+      "step": 17,
+      "dev_index": 180,
+      "question": "what are the future minimum commitments under the operating leases in 2015 as a percentage of the total future minimum commitments?",
+      "gold_answer": 0.09876,
+      "gold_program": "divide(127, 1286)",
+      "operands": [
+        "127",
+        "1286"
+      ],
+      "program": "(127 / 1286) * 100",
+      "symbolic_executed_value": 9.875583203732504,
+      "raw_output": "{\n  \"thought\": \"To find the percentage, we need to divide the future minimum commitments for 2015 by the total future minimum commitments and then multiply by 100. The future minimum commitments for 2015 is 127 million and the total future minimum commitments is 1286 million.\",\n  \"operands\": [\"127\", \"1286\"],\n  \"program\": \"(127 / 1286) * 100\",\n  \"answer\": \"9.93\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 19572.883300000285
+    },
+    {
+      "step": 18,
+      "dev_index": 241,
+      "question": "what percent did the balance increase between the beginning of 2010 and the end of 2012?",
+      "gold_answer": 0.41754,
+      "gold_program": "divide(404, 285), subtract(#0, 1)",
+      "operands": [
+        "404",
+        "285"
+      ],
+      "program": "(404 - 285) / 285 * 100",
+      "symbolic_executed_value": 41.75438596491228,
+      "raw_output": "{\n  \"thought\": \"To find the percentage increase, we need to calculate the difference between the balances at December 31, 2012 and December 31, 2010, then divide by the initial balance at January 1, 2010, and multiply by 100.\",\n  \"operands\": [\"404\", \"285\"],\n  \"program\": \"(404 - 285) / 285 * 100\",\n  \"answer\": \"36.04%\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 21517.410299999938
+    },
+    {
+      "step": 19,
+      "dev_index": 336,
+      "question": "what is the average price per share of the company 2019s common stock in the third quarter of 2016?",
+      "gold_answer": 30.0,
+      "gold_program": "add(32.91, 27.09), divide(#0, const_2)",
+      "operands": [
+        "32.91",
+        "27.09"
+      ],
+      "program": "(32.91 + 27.09) / 2",
+      "symbolic_executed_value": 30.0,
+      "raw_output": "{\n  \"thought\": \"To find the average price per share in the third quarter, sum the high and low prices and divide by 2. The high price for the third quarter is $32.91 and the low price is $27.09.\",\n  \"operands\": [\"32.91\", \"27.09\"],\n  \"program\": \"(32.91 + 27.09) / 2\",\n  \"answer\": \"29.50\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 11247.016499999518
+    },
+    {
+      "step": 20,
+      "dev_index": 429,
+      "question": "what are the future minimum commitments under the operating leases in 2014 as a percentage of the total future minimum commitments?",
+      "gold_answer": 0.10498,
+      "gold_program": "divide(135, 1286)",
+      "operands": [
+        "135",
+        "1286"
+      ],
+      "program": "(135 / 1286) * 100",
+      "symbolic_executed_value": 10.497667185069986,
+      "raw_output": "{\n  \"thought\": \"To find the percentage, we need to divide the future minimum commitments for 2014 by the total future minimum commitments and then multiply by 100. The future minimum commitments for 2014 is $135 million and the total future minimum commitments is $1286 million.\",\n  \"operands\": [\"135\", \"1286\"],\n  \"program\": \"(135 / 1286) * 100\",\n  \"answer\": \"10.51\"\n}",
+      "G": 1.0,
+      "J": 1.0,
+      "N": 1.0,
+      "S_comp": 1.0,
+      "latency_ms": 18370.77380000028
+    }
+  ]
+}
